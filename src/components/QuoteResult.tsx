@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Car, Calendar, DollarSign, Percent, Download, Send } from "lucide-react";
-import { CarData, UserData } from '@/types/forms';
+import { ArrowLeft, Car, Calendar, DollarSign, Percent, Download, Send, RefreshCw } from "lucide-react";
+import { CarData, UserData, Car } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +26,8 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
   userData 
 }) => {
   const [selectedTerm, setSelectedTerm] = useState<number>(36);
+  const [carDetails, setCarDetails] = useState<Car | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -50,6 +52,35 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
     
     updateQuotation();
   }, [selectedTerm, userData.email]);
+  
+  // Fetch car details if a car_id is available
+  useEffect(() => {
+    const fetchCarDetails = async () => {
+      if (!carData.carId) return;
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('cars')
+          .select('*')
+          .eq('id', carData.carId)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching car details:", error);
+        } else if (data) {
+          setCarDetails(data as Car);
+        }
+      } catch (err) {
+        console.error("Error in fetching car details:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCarDetails();
+  }, [carData.carId]);
   
   // Calculate loan details
   const carPrice = parseInt(carData.price);
@@ -121,9 +152,33 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
                 <Car className="h-5 w-5 text-primary" />
               </div>
               <h3 className="text-2xl font-semibold tracking-tight">Tu cotización de crédito</h3>
-              <p className="text-sm text-muted-foreground">
-                {carData.brand} {carData.model} {carData.year}
-              </p>
+              
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Cargando detalles del auto...</p>
+                </div>
+              ) : carDetails ? (
+                <div className="space-y-2">
+                  <h4 className="text-base font-medium">{carDetails.title}</h4>
+                  {carDetails.image_url && (
+                    <div className="relative w-full h-40 mx-auto overflow-hidden rounded-md">
+                      <img 
+                        src={carDetails.image_url} 
+                        alt={carDetails.title} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {carData.brand} {carData.model} {carData.year}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

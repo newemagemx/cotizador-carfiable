@@ -9,9 +9,58 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cars: {
+        Row: {
+          brand: string
+          created_at: string | null
+          id: string
+          image_url: string | null
+          last_checked: string | null
+          model: string
+          price: string
+          registration_type: string
+          title: string
+          updated_at: string | null
+          url: string | null
+          version: string | null
+          year: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string | null
+          id: string
+          image_url?: string | null
+          last_checked?: string | null
+          model: string
+          price: string
+          registration_type: string
+          title: string
+          updated_at?: string | null
+          url?: string | null
+          version?: string | null
+          year: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          last_checked?: string | null
+          model?: string
+          price?: string
+          registration_type?: string
+          title?: string
+          updated_at?: string | null
+          url?: string | null
+          version?: string | null
+          year?: string
+        }
+        Relationships: []
+      }
       quotations: {
         Row: {
           car_brand: string
+          car_id: string | null
           car_model: string
           car_price: string
           car_year: string
@@ -28,6 +77,7 @@ export type Database = {
         }
         Insert: {
           car_brand: string
+          car_id?: string | null
           car_model: string
           car_price: string
           car_year: string
@@ -44,6 +94,7 @@ export type Database = {
         }
         Update: {
           car_brand?: string
+          car_id?: string | null
           car_model?: string
           car_price?: string
           car_year?: string
@@ -58,7 +109,15 @@ export type Database = {
           user_phone?: string
           verification_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotations_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

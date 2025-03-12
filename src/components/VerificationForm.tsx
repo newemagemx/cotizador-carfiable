@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, RefreshCw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, RefreshCw, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CarData, UserData } from '@/types/forms';
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
   
   const { toast } = useToast();
 
@@ -37,33 +38,65 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  // Simulate sending verification code
-  const sendVerificationCode = () => {
+  // Send verification code via SMS
+  const sendVerificationCode = async () => {
     setIsLoading(true);
+    setIsSendingSMS(true);
     setError("");
     const code = generateCode();
     setExpectedCode(code);
     
-    // Simulate API call to send SMS/email
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Verification code sent:", code);
+    try {
+      // Call the Edge Function to send SMS
+      const { data, error } = await supabase.functions.invoke('send-verification-sms', {
+        body: {
+          phone: userData.phone,
+          verificationCode: code
+        }
+      });
+      
+      if (error) {
+        console.error("Error sending SMS:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo enviar el SMS. Intenta nuevamente.",
+          variant: "destructive",
+        });
+        // For demo purposes, we'll display the code in the console
+        console.log("Verification code:", code);
+        toast({
+          title: "Demo mode",
+          description: `Código para uso en demo: ${code}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Código enviado",
+          description: `Se ha enviado un código de verificación a ${userData.phone}`,
+        });
+      }
+    } catch (err) {
+      console.error("Error during SMS sending:", err);
       toast({
-        title: "Código enviado",
-        description: `Se ha enviado un código de verificación a ${userData.email}`,
+        title: "Error",
+        description: "Ocurrió un error al enviar el SMS",
+        variant: "destructive",
       });
       // For demo purposes, we'll display the code in the console
-      // In a real app, this would be sent via SMS or email
+      console.log("Verification code:", code);
       toast({
         title: "Demo mode",
         description: `Código para uso en demo: ${code}`,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+      setIsSendingSMS(false);
       
       // Start countdown for resend button
       setCountdown(60);
       setCanResend(false);
-    }, 1500);
+    }
   };
 
   // Handle countdown for resend button
@@ -104,7 +137,8 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               user_email: userData.email,
               user_phone: userData.phone,
               verification_code: verificationCode,
-              is_verified: true
+              is_verified: true,
+              car_id: carData.carId || null
             });
             
           if (saveError) {
@@ -158,9 +192,12 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         <CardContent className="pt-6">
           <div className="space-y-6">
             <div className="space-y-2 text-center">
+              <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-2 mb-2">
+                <Smartphone className="h-5 w-5 text-primary" />
+              </div>
               <h3 className="text-xl font-semibold tracking-tight">Verificación</h3>
               <p className="text-sm text-muted-foreground">
-                Te hemos enviado un código de verificación a <span className="font-medium">{userData.email}</span>
+                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{userData.phone}</span>
               </p>
             </div>
 
@@ -204,10 +241,19 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
                   variant="link" 
                   size="sm" 
                   onClick={handleResend} 
-                  disabled={!canResend || isLoading}
+                  disabled={!canResend || isLoading || isSendingSMS}
                   className="text-sm"
                 >
-                  {canResend ? 'Reenviar código' : `Reenviar en ${countdown}s`}
+                  {isSendingSMS ? (
+                    <>
+                      <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : canResend ? (
+                    'Reenviar código'
+                  ) : (
+                    `Reenviar en ${countdown}s`
+                  )}
                 </Button>
               </div>
             </div>
