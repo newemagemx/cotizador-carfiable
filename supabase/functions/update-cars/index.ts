@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
 const corsHeaders = {
@@ -32,6 +33,8 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hb3lzbGtuZWZ6emlwZG12YmV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE4MDE3NjAsImV4cCI6MjA1NzM3Nzc2MH0.gnBYnv8cNazTSFV8QEk499NCoDcsVUlmQHomauC1kqM'
     const supabase = createClient(supabaseUrl, supabaseKey)
     
+    console.log('Supabase client created, fetching existing cars')
+    
     // Fetch existing car IDs from database
     const { data: existingCars, error: fetchError } = await supabase
       .from('cars')
@@ -46,6 +49,8 @@ Deno.serve(async (req) => {
     
     // Fetch cars from Carfiable API
     const apiUrl = 'https://carfiable.mx/lista/?token=CAF001&year=2019,2020,2021,2022,2023,2024,2025&precio=9000,5000000&limit=1000'
+    console.log(`Fetching cars from API: ${apiUrl}`)
+    
     const response = await fetch(apiUrl)
     
     if (!response.ok) {
@@ -91,6 +96,7 @@ Deno.serve(async (req) => {
     
     // Upsert cars (insert new ones, update existing ones)
     if (carsToUpsert.length > 0) {
+      console.log(`Upserting ${carsToUpsert.length} cars to database`)
       const { error: upsertError } = await supabase
         .from('cars')
         .upsert(carsToUpsert, { onConflict: 'id' })
@@ -99,13 +105,14 @@ Deno.serve(async (req) => {
         throw new Error(`Error upserting cars: ${upsertError.message}`)
       }
       
-      console.log(`Upserted ${carsToUpsert.length} cars`)
+      console.log(`Successfully upserted ${carsToUpsert.length} cars`)
     }
     
     // Find car IDs to delete (existing cars not in the current API response)
     const carIdsToDelete = Array.from(existingCarIds).filter(id => !processedCarIds.has(id as string))
     
     if (carIdsToDelete.length > 0) {
+      console.log(`Deleting ${carIdsToDelete.length} cars that are no longer in API`)
       const { error: deleteError } = await supabase
         .from('cars')
         .delete()
@@ -115,13 +122,16 @@ Deno.serve(async (req) => {
         throw new Error(`Error deleting cars: ${deleteError.message}`)
       }
       
-      console.log(`Deleted ${carIdsToDelete.length} cars no longer in API`)
+      console.log(`Successfully deleted ${carIdsToDelete.length} cars`)
+    } else {
+      console.log('No cars to delete')
     }
     
     return new Response(
       JSON.stringify({
         success: true,
         message: `Processed ${filteredCars.length} cars. Added/updated ${carsToUpsert.length}, removed ${carIdsToDelete.length}`,
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -135,6 +145,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
