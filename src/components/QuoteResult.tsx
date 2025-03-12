@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -185,7 +184,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground mb-1 flex items-center">
-                  <Car className="h-3 w-3 mr-1" /> Precio del auto
+                  <CarIcon className="h-3 w-3 mr-1" /> Precio del auto
                 </p>
                 <p className="text-lg font-medium">{formatCurrency(carPrice)}</p>
               </div>
