@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, RefreshCw, Smartphone } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CarData, UserData } from '@/types/forms';
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +17,12 @@ interface VerificationFormProps {
   carData: CarData;
   userData: UserData;
 }
+
+// Country code options
+const COUNTRY_CODES = [
+  { label: 'México (+52)', value: '+52' },
+  { label: 'USA (+1)', value: '+1' },
+];
 
 const VerificationForm: React.FC<VerificationFormProps> = ({ 
   onVerified, 
@@ -30,12 +37,22 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0].value); // Default to Mexico
   
   const { toast } = useToast();
 
   // Generate a random 6-digit code
   const generateCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  // Get the full phone number with country code
+  const getFullPhoneNumber = () => {
+    // Remove any non-digit characters from the phone
+    const digitsOnly = userData.phone.replace(/\D/g, '');
+    
+    // Combine the country code with the phone number
+    return `${countryCode}${digitsOnly}`;
   };
 
   // Send verification code via SMS
@@ -49,9 +66,12 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     try {
       console.log("Calling send-verification-sms Edge Function");
       // Call the Edge Function to send SMS
+      const fullPhoneNumber = getFullPhoneNumber();
+      console.log(`Sending SMS to: ${fullPhoneNumber}`);
+      
       const { data, error } = await supabase.functions.invoke('send-verification-sms', {
         body: {
-          phone: userData.phone,
+          phone: fullPhoneNumber,
           verificationCode: code
         }
       });
@@ -73,7 +93,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         console.log("SMS sent successfully:", data);
         toast({
           title: "Código enviado",
-          description: `Se ha enviado un código de verificación a ${userData.phone}`,
+          description: `Se ha enviado un código de verificación a ${formatPhoneDisplay(userData.phone, countryCode)}`,
         });
       }
     } catch (err) {
@@ -135,7 +155,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               down_payment_percentage: carData.downPaymentPercentage,
               user_name: userData.name,
               user_email: userData.email,
-              user_phone: userData.phone,
+              user_phone: getFullPhoneNumber(),
               verification_code: verificationCode,
               is_verified: true,
               car_id: carData.carId || null
@@ -180,22 +200,26 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     }
   };
 
+  const handleCountryCodeChange = (value: string) => {
+    setCountryCode(value);
+  };
+
   // Format phone number display for UI
-  const formatPhoneDisplay = (phone: string) => {
+  const formatPhoneDisplay = (phone: string, code = countryCode) => {
     if (!phone) return '';
     // Ensure we're working with digits only
     const digitsOnly = phone.replace(/\D/g, '');
     
-    // Add country code if missing
-    let formattedPhone = digitsOnly;
-    if (digitsOnly.length === 10) {
-      formattedPhone = `+52 ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
-    } else if (digitsOnly.length > 10) {
-      // Assume it already has country code
-      formattedPhone = `+${digitsOnly.substring(0, 2)} ${digitsOnly.substring(2, 5)} ${digitsOnly.substring(5, 8)} ${digitsOnly.substring(8)}`;
+    if (code === '+52') {
+      // Format for Mexico: +52 XXX XXX XXXX
+      return `${code} ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
+    } else if (code === '+1') {
+      // Format for USA: +1 XXX XXX XXXX
+      return `${code} ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
     }
     
-    return formattedPhone;
+    // Default format
+    return `${code} ${digitsOnly}`;
   };
 
   return (
@@ -220,6 +244,29 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
             </div>
 
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="countryCode">Código de país</Label>
+                <Select 
+                  value={countryCode} 
+                  onValueChange={handleCountryCodeChange}
+                  disabled={isLoading || isSendingSMS}
+                >
+                  <SelectTrigger id="countryCode" className="w-full">
+                    <SelectValue placeholder="Selecciona un código de país" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map((code) => (
+                      <SelectItem key={code.value} value={code.value}>
+                        {code.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selecciona el código de país correcto antes de reenviar el código
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="verificationCode">Código de verificación</Label>
                 <Input

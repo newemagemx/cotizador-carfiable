@@ -34,7 +34,9 @@ Deno.serve(async (req) => {
       throw new Error('Twilio credentials not configured')
     }
     
-    // Normalize phone number (make sure it starts with +)
+    // Ensure phone number starts with +
+    // The phone number should already be formatted correctly by the frontend
+    // with the appropriate country code (+52 or +1)
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`
     console.log(`Normalized phone: ${normalizedPhone}`)
     
