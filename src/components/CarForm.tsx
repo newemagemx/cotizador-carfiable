@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,13 +21,14 @@ interface CarFormProps {
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 20 }, (_, i) => currentYear - i);
 
-const brands = [
+// These will be replaced with data from the API
+const fallbackBrands = [
   "Audi", "BMW", "Chevrolet", "Ford", "Honda", 
   "Hyundai", "Kia", "Mazda", "Mercedes-Benz", 
   "Nissan", "Tesla", "Toyota", "Volkswagen"
 ];
 
-const models: Record<string, string[]> = {
+const fallbackModels: Record<string, string[]> = {
   "Audi": ["A3", "A4", "A6", "Q3", "Q5", "Q7"],
   "BMW": ["Serie 1", "Serie 3", "Serie 5", "X1", "X3", "X5"],
   "Chevrolet": ["Aveo", "Camaro", "Cruze", "Malibu", "Spark", "Suburban"],
@@ -63,13 +65,87 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
+  // New state for brands and models from API
+  const [brands, setBrands] = useState<string[]>([]);
+  const [models, setModels] = useState<Record<string, string[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch brands and models from the API
+  useEffect(() => {
+    const fetchBrandsAndModels = async () => {
+      setIsLoading(true);
+      try {
+        // First fetch all distinct brands
+        const { data: brandsData, error: brandsError } = await supabase
+          .from('cars')
+          .select('brand')
+          .order('brand')
+          .not('brand', 'is', null);
+        
+        if (brandsError) throw brandsError;
+        
+        // Extract unique brands
+        const uniqueBrands = Array.from(new Set(brandsData.map(item => item.brand)));
+        
+        // Add "Otra marca" option
+        const allBrands = [...uniqueBrands, "Otra marca"];
+        setBrands(allBrands);
+        
+        // Now fetch all models and organize by brand
+        const modelsMap: Record<string, string[]> = {};
+        
+        // Process for each brand
+        for (const brand of uniqueBrands) {
+          const { data: modelsData, error: modelsError } = await supabase
+            .from('cars')
+            .select('model')
+            .eq('brand', brand)
+            .not('model', 'is', null);
+          
+          if (modelsError) throw modelsError;
+          
+          // Extract unique models for this brand
+          const uniqueModels = Array.from(new Set(modelsData.map(item => item.model)));
+          // Add "Otro modelo" option
+          modelsMap[brand] = [...uniqueModels, "Otro modelo"];
+        }
+        
+        // Add empty array for "Otra marca"
+        modelsMap["Otra marca"] = ["Otro modelo"];
+        
+        setModels(modelsMap);
+      } catch (error) {
+        console.error('Error fetching brands and models:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las marcas y modelos. Usando datos de respaldo.",
+          variant: "destructive",
+        });
+        // Use fallback data if API fails
+        setBrands([...fallbackBrands, "Otra marca"]);
+        
+        const fallbackWithOther = { ...fallbackModels };
+        Object.keys(fallbackWithOther).forEach(brand => {
+          fallbackWithOther[brand] = [...fallbackWithOther[brand], "Otro modelo"];
+        });
+        fallbackWithOther["Otra marca"] = ["Otro modelo"];
+        
+        setModels(fallbackWithOther);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBrandsAndModels();
+  }, [toast]);
+
   const handleBrandChange = (value: string) => {
     setFormData({
       ...formData,
       brand: value,
       model: "" // Reset model when brand changes
     });
-    setAvailableModels(models[value] || []);
+    setAvailableModels(models[value] || ["Otro modelo"]);
   };
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,9 +288,10 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
                   <Select 
                     value={formData.brand} 
                     onValueChange={handleBrandChange}
+                    disabled={isLoading}
                   >
                     <SelectTrigger id="brand" className={errors.brand ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Selecciona una marca" />
+                      <SelectValue placeholder={isLoading ? "Cargando marcas..." : "Selecciona una marca"} />
                     </SelectTrigger>
                     <SelectContent>
                       {brands.map((brand) => (
@@ -232,10 +309,10 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
                   <Select 
                     value={formData.model} 
                     onValueChange={(value) => setFormData({...formData, model: value})}
-                    disabled={!formData.brand}
+                    disabled={!formData.brand || isLoading}
                   >
                     <SelectTrigger id="model" className={errors.model ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Selecciona un modelo" />
+                      <SelectValue placeholder={isLoading ? "Cargando modelos..." : "Selecciona un modelo"} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableModels.map((model) => (
