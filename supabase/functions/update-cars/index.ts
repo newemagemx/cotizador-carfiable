@@ -109,26 +109,40 @@ async function processCars() {
       // Extract car data array
       let carsData = [];
       
-      if (Array.isArray(responseData)) {
-        carsData = responseData;
-        console.log(`Response is an array with ${carsData.length} items`);
-      } else if (typeof responseData === 'object') {
-        // Try to find the array in the response object
-        console.log('Response is an object, looking for array property');
-        console.log('Object keys:', Object.keys(responseData));
-        
+      // Analizar estructura correcta basada en los logs
+      console.log('Response is an object, looking for data structure');
+      console.log('Object keys:', Object.keys(responseData));
+      
+      // Estructura esperada según logs: responseData.cars.data[]
+      if (responseData.cars && Array.isArray(responseData.cars.data)) {
+        carsData = responseData.cars.data;
+        console.log(`Found cars array in cars.data with ${carsData.length} items`);
+      } else if (responseData.cars && Array.isArray(responseData.cars)) {
+        carsData = responseData.cars;
+        console.log(`Found cars array directly in 'cars' property with ${carsData.length} items`);
+      } else {
+        // Intentar buscar cualquier array en la respuesta
         for (const key in responseData) {
           if (Array.isArray(responseData[key])) {
             carsData = responseData[key];
             console.log(`Found array in property '${key}' with ${carsData.length} items`);
             break;
+          } else if (responseData[key] && typeof responseData[key] === 'object' && responseData[key].data && Array.isArray(responseData[key].data)) {
+            carsData = responseData[key].data;
+            console.log(`Found array in property '${key}.data' with ${carsData.length} items`);
+            break;
           }
         }
       }
       
+      // Mostrar una muestra de la estructura de datos para debug
+      console.log('Response data structure:', JSON.stringify(responseData).substring(0, 500) + '...');
+      
       if (carsData.length === 0) {
         console.error('Could not find car data in API response');
-        console.log('Response data structure:', JSON.stringify(responseData).substring(0, 500) + '...');
+        if (responseData.cars && typeof responseData.cars === 'object') {
+          console.log('Cars object structure:', JSON.stringify(responseData.cars).substring(0, 500) + '...');
+        }
         return;
       }
       
@@ -146,25 +160,38 @@ async function processCars() {
             console.log('First car sample:', JSON.stringify(car));
           }
           
-          return car.registro === 'Mexicano de agencia' && 
+          // Adaptado para ser más flexible con el campo registro
+          return (car.registro === 'Mexicano de agencia' || car.registro?.includes('Mexicano')) && 
                  car.year && 
                  parseInt(String(car.year), 10) >= 2022;
         })
         .slice(0, 30) // Limitamos a max 30 coches para procesamiento más rápido
-        .map(car => ({
-          id: car.id,
-          brand: car.marca || '',
-          model: car.modelo || '',
-          version: car.version || null,
-          year: car.year || '',
-          price: car.precio || '',
-          image_url: car.imagen || null,
-          title: car.title || '',
-          url: car.url || null,
-          registration_type: car.registro || '',
-          last_checked: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
+        .map(car => {
+          // Determinar la URL de la imagen
+          let imageUrl = null;
+          if (car.imagen) {
+            imageUrl = car.imagen;
+          } else if (car.exterior && Array.isArray(car.exterior) && car.exterior.length > 0) {
+            imageUrl = car.exterior[0];
+          } else if (car.cover) {
+            imageUrl = car.cover;
+          }
+          
+          return {
+            id: car.id,
+            brand: car.marca || '',
+            model: car.modelo || '',
+            version: car.version || null,
+            year: car.year || '',
+            price: car.precio || '',
+            image_url: imageUrl,
+            title: car.title || `${car.marca} ${car.modelo} ${car.year}`,
+            url: car.url || null,
+            registration_type: car.registro || '',
+            last_checked: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        });
       
       console.log(`Filtered to ${validCars.length} valid cars`);
       
@@ -233,4 +260,3 @@ async function processCars() {
 addEventListener('beforeunload', (ev) => {
   console.log('Function shutting down. Reason:', ev.detail?.reason);
 });
-
