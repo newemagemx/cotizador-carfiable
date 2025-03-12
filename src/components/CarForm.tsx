@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { ChevronRight, Search, RefreshCw } from "lucide-react";
+import { CarIcon } from "lucide-react"; // Import as CarIcon to avoid conflict
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CarData, Car } from '@/types/forms';
+import { CarData, CarDetails } from '@/types/forms';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,8 +58,8 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
   
   // Car search functionality
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<Car[]>([]);
-  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [searchResults, setSearchResults] = useState<CarDetails[]>([]);
+  const [selectedCar, setSelectedCar] = useState<CarDetails | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
@@ -119,7 +119,7 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
         throw error;
       }
       
-      setSearchResults(cars as Car[]);
+      setSearchResults(cars as CarDetails[]);
       
       if (cars.length === 0) {
         toast({
@@ -139,7 +139,7 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
     }
   };
 
-  const handleSelectCar = (car: Car) => {
+  const handleSelectCar = (car: CarDetails) => {
     setSelectedCar(car);
     // Update form data with car details
     setFormData({
@@ -189,6 +189,7 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
   const downPaymentAmount = parseInt(formData.price) * (formData.downPaymentPercentage / 100);
 
   return (
+    
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -313,7 +314,7 @@ const CarForm: React.FC<CarFormProps> = ({ onNext }) => {
                               />
                             ) : (
                               <div className="w-full h-full bg-muted flex items-center justify-center rounded-md">
-                                <Car className="w-8 h-8 text-muted-foreground" />
+                                <CarIcon className="w-8 h-8 text-muted-foreground" />
                               </div>
                             )}
                           </div>

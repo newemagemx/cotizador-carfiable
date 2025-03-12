@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Car, Calendar, DollarSign, Percent, Download, Send, RefreshCw } from "lucide-react";
-import { CarData, UserData, Car } from '@/types/forms';
+import { ArrowLeft, Calendar, DollarSign, Percent, Download, Send, RefreshCw } from "lucide-react";
+import { CarIcon } from "lucide-react"; // Import as CarIcon to avoid conflict
+import { CarData, UserData, CarDetails } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,7 +27,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
   userData 
 }) => {
   const [selectedTerm, setSelectedTerm] = useState<number>(36);
-  const [carDetails, setCarDetails] = useState<Car | null>(null);
+  const [carDetails, setCarDetails] = useState<CarDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
@@ -70,7 +71,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
         if (error) {
           console.error("Error fetching car details:", error);
         } else if (data) {
-          setCarDetails(data as Car);
+          setCarDetails(data as CarDetails);
         }
       } catch (err) {
         console.error("Error in fetching car details:", err);
@@ -149,7 +150,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
           <div className="space-y-6">
             <div className="space-y-2 text-center">
               <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-2 mb-2">
-                <Car className="h-5 w-5 text-primary" />
+                <CarIcon className="h-5 w-5 text-primary" />
               </div>
               <h3 className="text-2xl font-semibold tracking-tight">Tu cotización de crédito</h3>
               

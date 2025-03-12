@@ -14,7 +14,7 @@ export interface UserData {
   phone: string;
 }
 
-export interface Car {
+export interface CarDetails {
   id: string;
   brand: string;
   model: string;
