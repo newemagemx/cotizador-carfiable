@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
 const corsHeaders = {
@@ -56,79 +57,145 @@ Deno.serve(async (req) => {
       throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
     
-    const responseData = await response.json()
-    console.log(`API response received. Type: ${typeof responseData}`)
+    // Log the raw response for debugging
+    const rawResponse = await response.text()
+    console.log('Raw API response received. Length:', rawResponse.length)
     
-    // Check if the API response is an array
+    // Parse the response safely
+    let responseData
+    try {
+      responseData = JSON.parse(rawResponse)
+      console.log(`API response parsed. Type: ${typeof responseData}`)
+    } catch (parseError) {
+      console.error('Failed to parse API response:', parseError)
+      console.error('First 500 characters of response:', rawResponse.substring(0, 500))
+      throw new Error(`Failed to parse API response: ${parseError.message}`)
+    }
+    
+    // Safely extract car data
     let carsData: CarData[] = []
     
     if (Array.isArray(responseData)) {
-      console.log('API response is an array')
+      console.log('API response is an array with', responseData.length, 'items')
       carsData = responseData
     } else if (typeof responseData === 'object' && responseData !== null) {
-      // Check if response is an object that might contain cars data
-      console.log('API response is an object, checking for data property')
+      console.log('API response is an object, checking for data arrays')
       
-      // Try to find an array property in the response object
-      const possibleArrayProps = Object.entries(responseData)
-        .find(([_, value]) => Array.isArray(value))
+      // Log available properties for debugging
+      console.log('Response object properties:', Object.keys(responseData))
       
-      if (possibleArrayProps) {
-        const [propName, arrayValue] = possibleArrayProps
-        console.log(`Found array in response at property: ${propName}`)
-        carsData = arrayValue as CarData[]
-      } else if (responseData.cars && Array.isArray(responseData.cars)) {
-        console.log('Found cars array in response object')
+      // Check common properties where car data might be stored
+      if (responseData.cars && Array.isArray(responseData.cars)) {
+        console.log('Found cars array with', responseData.cars.length, 'items')
         carsData = responseData.cars
       } else if (responseData.data && Array.isArray(responseData.data)) {
-        console.log('Found data array in response object')
+        console.log('Found data array with', responseData.data.length, 'items')
         carsData = responseData.data
+      } else if (responseData.results && Array.isArray(responseData.results)) {
+        console.log('Found results array with', responseData.results.length, 'items')
+        carsData = responseData.results
+      } else if (responseData.items && Array.isArray(responseData.items)) {
+        console.log('Found items array with', responseData.items.length, 'items')
+        carsData = responseData.items
       } else {
-        // If we can't find an array in the response, log the response structure
-        console.error('Unable to find cars data in response. Response structure:', JSON.stringify(responseData, null, 2).substring(0, 1000) + '...')
-        throw new Error('Invalid API response format: could not find cars array')
+        // Try to find any array property in the response
+        for (const [key, value] of Object.entries(responseData)) {
+          if (Array.isArray(value) && value.length > 0) {
+            console.log(`Found array at property "${key}" with ${value.length} items`)
+            carsData = value as CarData[]
+            break
+          }
+        }
+        
+        // If we still couldn't find an array, log detailed info
+        if (carsData.length === 0) {
+          console.error('Unable to find cars data array in response')
+          console.error('Response structure (first 1000 chars):', 
+                      JSON.stringify(responseData, null, 2).substring(0, 1000))
+          throw new Error('Could not find car data array in API response')
+        }
       }
     } else {
       console.error('Unexpected API response format:', typeof responseData)
       throw new Error(`Invalid API response format: ${typeof responseData}`)
     }
     
-    console.log(`Processing ${carsData.length} cars from API`)
+    console.log(`Successfully extracted ${carsData.length} car records from API response`)
     
-    // Filter cars to keep only "Mexicano de agencia" and year >= 2019
-    const filteredCars = carsData.filter(car => {
-      return car && car.registro === 'Mexicano de agencia' && 
-             parseInt(car.year) >= 2019
-    })
+    // Validate car data before filtering
+    if (!Array.isArray(carsData)) {
+      console.error('Extracted cars data is not an array:', typeof carsData)
+      throw new Error('Extracted car data is not an array')
+    }
+    
+    console.log('Sample of first car data (if available):', 
+                carsData.length > 0 ? JSON.stringify(carsData[0], null, 2) : 'No cars found')
+    
+    // Safely filter cars with proper error handling
+    const filteredCars = []
+    for (const car of carsData) {
+      try {
+        if (!car) {
+          console.warn('Skipping null or undefined car entry')
+          continue
+        }
+        
+        if (typeof car !== 'object') {
+          console.warn(`Skipping non-object car entry of type ${typeof car}`)
+          continue
+        }
+        
+        if (!car.id) {
+          console.warn('Skipping car without ID:', car)
+          continue
+        }
+        
+        if (!car.registro) {
+          console.warn('Skipping car without registro property:', car.id)
+          continue
+        }
+        
+        if (!car.year) {
+          console.warn('Skipping car without year property:', car.id)
+          continue
+        }
+        
+        // Apply filtering criteria
+        if (car.registro === 'Mexicano de agencia' && parseInt(car.year) >= 2019) {
+          filteredCars.push(car)
+        }
+      } catch (filterError) {
+        console.warn('Error processing car data:', filterError, 'Car:', car)
+        // Continue with the next car instead of failing the entire operation
+      }
+    }
     
     console.log(`Filtered to ${filteredCars.length} cars matching criteria`)
     
     // Track processed car IDs
     const processedCarIds = new Set<string>()
     
-    // Prepare arrays for upsert and deletion
+    // Prepare array for upsert
     const carsToUpsert = []
     
     // Process each car
     for (const car of filteredCars) {
-      if (!car.id) {
-        console.warn('Skipping car without ID:', car)
-        continue
-      }
+      // We already validated ID existence above, but double-check
+      if (!car.id) continue
       
       processedCarIds.add(car.id)
       
       carsToUpsert.push({
         id: car.id,
-        brand: car.marca,
-        model: car.modelo,
-        version: car.version,
-        year: car.year,
-        price: car.precio,
-        image_url: car.imagen,
-        title: car.title,
-        url: car.url,
-        registration_type: car.registro,
+        brand: car.marca || '',
+        model: car.modelo || '',
+        version: car.version || null,
+        year: car.year || '',
+        price: car.precio || '',
+        image_url: car.imagen || null,
+        title: car.title || '',
+        url: car.url || null,
+        registration_type: car.registro || '',
         last_checked: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -146,6 +213,8 @@ Deno.serve(async (req) => {
       }
       
       console.log(`Successfully upserted ${carsToUpsert.length} cars`)
+    } else {
+      console.log('No cars to upsert')
     }
     
     // Find car IDs to delete (existing cars not in the current API response)
