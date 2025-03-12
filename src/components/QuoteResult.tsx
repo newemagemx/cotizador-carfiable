@@ -3,12 +3,13 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, DollarSign, Percent, Download, Send, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Percent, Send, RefreshCw, Share2 } from "lucide-react";
 import { CarIcon } from "lucide-react"; // Import as CarIcon to avoid conflict
 import { CarData, UserData, CarDetails } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Disclaimer from './Disclaimer';
+import { createWhatsAppShareLink } from '@/utils/shareUtils';
 
 interface QuoteResultProps {
   onBack: () => void;
@@ -123,17 +124,122 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
     }).format(amount);
   };
 
-  const handleSendQuote = () => {
-    toast({
-      title: "Cotización enviada",
-      description: `Se ha enviado la cotización a ${userData.email}`,
-    });
+  const handleSendQuote = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Create HTML template for email
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; padding: 20px 0;">
+            <img src="https://carfiable.mx/wp-content/uploads/2023/10/Asset-1.png" alt="Carfiable Logo" style="max-height: 60px;">
+          </div>
+          <h1 style="color: #0066ff; font-size: 24px; margin-bottom: 20px;">Tu Cotización de Crédito Automotriz</h1>
+          <p>Hola ${userData.name},</p>
+          <p>Gracias por utilizar el cotizador de Carfiable. Aquí está el detalle de tu cotización:</p>
+          
+          <div style="background-color: #f7f9fc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h2 style="font-size: 18px; margin-top: 0;">${carData.brand} ${carData.model} ${carData.year}</h2>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span>Precio del auto:</span>
+              <strong>${formatCurrency(parseInt(carData.price))}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span>Enganche (${carData.downPaymentPercentage}%):</span>
+              <strong>${formatCurrency(carPrice * (carData.downPaymentPercentage / 100))}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span>Monto a financiar:</span>
+              <strong>${formatCurrency(loanAmount)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span>Tasa de interés:</span>
+              <strong>${annualInterestRate}% anual</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span>Plazo:</span>
+              <strong>${selectedTerm} meses</strong>
+            </div>
+            <div style="background-color: #0066ff; color: white; border-radius: 6px; padding: 15px; margin-top: 15px;">
+              <div style="display: flex; justify-content: space-between; font-size: 20px;">
+                <span>Pago mensual:</span>
+                <strong>${formatCurrency(calculateMonthlyPayment(selectedTerm))}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <p style="font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px;">
+            Esta cotización es únicamente informativa y no representa una oferta vinculante de crédito. 
+            La aprobación final, tasa de interés y condiciones están sujetas a verificación de buró de crédito 
+            y políticas vigentes de Carfiable al momento de la solicitud formal. Los montos pueden variar.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://carfiable.mx" style="background-color: #0066ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+              Visitar Carfiable
+            </a>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+            <p>© ${new Date().getFullYear()} Carfiable. Todos los derechos reservados.</p>
+            <p><a href="https://carfiable.mx/aviso-de-privacidad/" style="color: #0066ff;">Aviso de Privacidad</a></p>
+          </div>
+        </div>
+      `;
+      
+      // Call the edge function to send email
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: userData.email,
+          toName: userData.name,
+          subject: 'Tu cotización de crédito automotriz - Carfiable',
+          htmlContent
+        }
+      });
+      
+      if (error) {
+        console.error("Error sending email:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo enviar el correo. Intenta nuevamente.",
+          variant: "destructive",
+        });
+      } else {
+        console.log("Email sent successfully:", data);
+        toast({
+          title: "Cotización enviada",
+          description: `Se ha enviado la cotización a ${userData.email}`,
+        });
+      }
+    } catch (err) {
+      console.error("Error in sending quote:", err);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al enviar la cotización",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDownloadQuote = () => {
+  const handleShareWhatsApp = () => {
+    const shareLink = createWhatsAppShareLink(
+      carData.brand,
+      carData.model,
+      carData.year,
+      formatCurrency(carPrice),
+      carData.downPaymentPercentage,
+      calculateMonthlyPayment(selectedTerm),
+      selectedTerm
+    );
+    
+    // Open the WhatsApp share link in a new tab
+    window.open(shareLink, '_blank');
+    
     toast({
-      title: "Descarga iniciada",
-      description: "Tu cotización se está descargando",
+      title: "Compartir en WhatsApp",
+      description: "Abriendo WhatsApp para compartir tu cotización",
     });
   };
 
@@ -274,18 +380,28 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
-                onClick={handleDownloadQuote}
+                onClick={handleShareWhatsApp}
                 className="w-full"
               >
-                <Download className="mr-2 h-4 w-4" />
-                Descargar
+                <Share2 className="mr-2 h-4 w-4" />
+                Compartir por WhatsApp
               </Button>
               <Button
                 onClick={handleSendQuote}
                 className="w-full"
+                disabled={isLoading}
               >
-                <Send className="mr-2 h-4 w-4" />
-                Enviar por correo
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Enviar por correo
+                  </>
+                )}
               </Button>
             </div>
 

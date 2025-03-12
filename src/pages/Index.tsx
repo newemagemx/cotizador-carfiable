@@ -8,6 +8,7 @@ import VerificationForm from '@/components/VerificationForm';
 import QuoteResult from '@/components/QuoteResult';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import WhatsAppBanner from '@/components/WhatsAppBanner';
 import { CarData, UserData } from '@/types/forms';
 
 const Index = () => {
@@ -94,6 +95,7 @@ const Index = () => {
       </motion.div>
       
       <Footer />
+      <WhatsAppBanner />
     </div>
   );
 };
