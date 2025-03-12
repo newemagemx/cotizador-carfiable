@@ -13,5 +13,17 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Function to invoke the update-cars edge function
 export const updateCars = async () => {
-  return await supabase.functions.invoke('update-cars');
+  try {
+    const { data, error } = await supabase.functions.invoke('update-cars');
+    
+    if (error) {
+      console.error('Error invoking update-cars:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (err) {
+    console.error('Exception invoking update-cars:', err);
+    return { success: false, error: err };
+  }
 };
