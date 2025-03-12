@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
 const corsHeaders = {
@@ -57,12 +56,48 @@ Deno.serve(async (req) => {
       throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
     
-    const cars: CarData[] = await response.json()
-    console.log(`Fetched ${cars.length} cars from API`)
+    const responseData = await response.json()
+    console.log(`API response received. Type: ${typeof responseData}`)
+    
+    // Check if the API response is an array
+    let carsData: CarData[] = []
+    
+    if (Array.isArray(responseData)) {
+      console.log('API response is an array')
+      carsData = responseData
+    } else if (typeof responseData === 'object' && responseData !== null) {
+      // Check if response is an object that might contain cars data
+      console.log('API response is an object, checking for data property')
+      
+      // Try to find an array property in the response object
+      const possibleArrayProps = Object.entries(responseData)
+        .find(([_, value]) => Array.isArray(value))
+      
+      if (possibleArrayProps) {
+        const [propName, arrayValue] = possibleArrayProps
+        console.log(`Found array in response at property: ${propName}`)
+        carsData = arrayValue as CarData[]
+      } else if (responseData.cars && Array.isArray(responseData.cars)) {
+        console.log('Found cars array in response object')
+        carsData = responseData.cars
+      } else if (responseData.data && Array.isArray(responseData.data)) {
+        console.log('Found data array in response object')
+        carsData = responseData.data
+      } else {
+        // If we can't find an array in the response, log the response structure
+        console.error('Unable to find cars data in response. Response structure:', JSON.stringify(responseData, null, 2).substring(0, 1000) + '...')
+        throw new Error('Invalid API response format: could not find cars array')
+      }
+    } else {
+      console.error('Unexpected API response format:', typeof responseData)
+      throw new Error(`Invalid API response format: ${typeof responseData}`)
+    }
+    
+    console.log(`Processing ${carsData.length} cars from API`)
     
     // Filter cars to keep only "Mexicano de agencia" and year >= 2019
-    const filteredCars = cars.filter(car => {
-      return car.registro === 'Mexicano de agencia' && 
+    const filteredCars = carsData.filter(car => {
+      return car && car.registro === 'Mexicano de agencia' && 
              parseInt(car.year) >= 2019
     })
     
@@ -76,6 +111,11 @@ Deno.serve(async (req) => {
     
     // Process each car
     for (const car of filteredCars) {
+      if (!car.id) {
+        console.warn('Skipping car without ID:', car)
+        continue
+      }
+      
       processedCarIds.add(car.id)
       
       carsToUpsert.push({
