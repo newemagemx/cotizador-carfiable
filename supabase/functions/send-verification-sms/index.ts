@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
 
   try {
     const { phone, verificationCode } = await req.json()
+    console.log(`Sending verification code to phone: ${phone}`)
     
     if (!phone) {
       throw new Error('Phone number is required')
@@ -26,35 +27,44 @@ Deno.serve(async (req) => {
     // Get Twilio credentials from environment variables
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN')
+    const fromPhone = Deno.env.get('TWILIO_PHONE_NUMBER') || '+19783181260'
     
     if (!accountSid || !authToken) {
+      console.error('Twilio credentials missing:', { accountSid: !!accountSid, authToken: !!authToken })
       throw new Error('Twilio credentials not configured')
     }
     
     // Normalize phone number (make sure it starts with +)
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`
+    console.log(`Normalized phone: ${normalizedPhone}`)
     
     // Send SMS via Twilio API
     const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
+    console.log(`Using Twilio endpoint: ${twilioEndpoint}`)
     
+    const twilioBody = new URLSearchParams({
+      From: fromPhone,
+      To: normalizedPhone,
+      Body: `Tu código de verificación Auto Quote Ninja es: ${verificationCode}`,
+    }).toString()
+    
+    console.log('Sending request to Twilio...')
     const twilioResponse = await fetch(twilioEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        From: '+19783181260', // Your Twilio phone number (using a demo one)
-        To: normalizedPhone,
-        Body: `Tu código de verificación Auto Quote Ninja es: ${verificationCode}`,
-      }).toString(),
+      body: twilioBody,
     })
     
+    console.log(`Twilio response status: ${twilioResponse.status}`)
     const twilioData = await twilioResponse.json()
+    console.log('Twilio response data:', JSON.stringify(twilioData))
     
     if (!twilioResponse.ok) {
-      console.error('Twilio error:', twilioData)
-      throw new Error(`Failed to send SMS: ${twilioData.message || 'Unknown error'}`)
+      console.error('Twilio error details:', twilioData)
+      throw new Error(`Failed to send SMS: ${twilioData.message || twilioData.error_message || 'Unknown error'}`)
     }
     
     return new Response(
