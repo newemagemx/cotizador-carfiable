@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -150,34 +149,31 @@ const UserForm: React.FC<UserFormProps> = ({ onNext, onBack }) => {
                 )}
               </div>
 
-              {/* Country Code Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="countryCode" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Código de país
-                </Label>
-                <CountryCodeSelector 
-                  value={formData.countryCode}
-                  onChange={handleCountryCodeChange}
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="phone" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   Teléfono
                 </Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  value={formatPhoneForDisplay(formData.phone)}
-                  onChange={handlePhoneChange}
-                  placeholder="Ej. 555 123 4567"
-                  className={errors.phone ? 'border-red-500' : ''}
-                  autoComplete="tel"
-                />
+                <div className="flex">
+                  <div className="relative">
+                    <CountryCodeSelector 
+                      value={formData.countryCode}
+                      onChange={handleCountryCodeChange}
+                      compact={true}
+                    />
+                  </div>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={formatPhoneForDisplay(formData.phone)}
+                    onChange={handlePhoneChange}
+                    placeholder="Ej. 555 123 4567"
+                    className={`flex-1 ${errors.phone ? 'border-red-500' : ''} rounded-l-none`}
+                    autoComplete="tel"
+                  />
+                </div>
                 {errors.phone && (
                   <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
                 )}

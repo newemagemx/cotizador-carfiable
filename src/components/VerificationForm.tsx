@@ -88,7 +88,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               </div>
               <h3 className="text-xl font-semibold tracking-tight">Verificación</h3>
               <p className="text-sm text-muted-foreground">
-                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{formatPhoneDisplay(userData.phone, userData.countryCode || '+52')}</span>
+                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{userData.countryCode} {formatPhoneDisplay(userData.phone, userData.countryCode || '+52')}</span>
               </p>
             </div>
 

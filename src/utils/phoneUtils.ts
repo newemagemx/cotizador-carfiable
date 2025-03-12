@@ -9,14 +9,14 @@ export const formatPhoneDisplay = (phone: string, code: string): string => {
   
   if (code === '+52') {
     // Format for Mexico: +52 XXX XXX XXXX
-    return `${code} ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
+    return `${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
   } else if (code === '+1') {
     // Format for USA: +1 XXX XXX XXXX
-    return `${code} ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
+    return `${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
   }
   
   // Default format
-  return `${code} ${digitsOnly}`;
+  return digitsOnly;
 };
 
 /**
