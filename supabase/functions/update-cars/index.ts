@@ -41,11 +41,8 @@ Deno.serve(async (req) => {
       .select('id')
     
     if (fetchError) {
+      console.error('Error fetching existing cars:', fetchError)
       throw new Error(`Error fetching existing cars: ${fetchError.message}`)
-    }
-    
-    if (!existingCars) {
-      console.warn('No existing cars found in database, will proceed with adding new cars')
     }
     
     const existingCarIds = new Set((existingCars || []).map(car => car.id))
@@ -72,6 +69,7 @@ Deno.serve(async (req) => {
         })
         
         if (!response.ok) {
+          console.error(`API returned status: ${response.status} ${response.statusText}`)
           throw new Error(`API error: ${response.status} ${response.statusText}`)
         }
         
@@ -96,22 +94,18 @@ Deno.serve(async (req) => {
       throw new Error('API response is null after retries')
     }
     
-    // Log the raw response for debugging
-    let rawResponseText
-    try {
-      rawResponseText = await apiResponse.text()
-      console.log('Raw API response received. Length:', rawResponseText.length)
-      console.log('First 200 characters:', rawResponseText.substring(0, 200))
-    } catch (textError) {
-      console.error('Failed to get API response text:', textError)
-      throw new Error(`Failed to get API response text: ${textError.message}`)
-    }
+    // Get response as text first for debugging
+    const rawResponseText = await apiResponse.text()
+    console.log('Raw API response received. Length:', rawResponseText.length)
     
     if (!rawResponseText || rawResponseText.trim() === '') {
       throw new Error('API returned empty response')
     }
     
-    // Parse the response safely
+    // Log sample of the response
+    console.log('First 200 characters of response:', rawResponseText.substring(0, 200))
+    
+    // Parse the response safely with additional error handling
     let responseData
     try {
       responseData = JSON.parse(rawResponseText)
@@ -122,78 +116,106 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to parse API response: ${parseError.message}`)
     }
     
-    // Extract car data from various possible response formats
-    let carsData: any[] = []
-    
-    console.log('Response type:', typeof responseData)
+    // Extract car data with more robust detection of response structure
+    let carsData = []
     
     if (responseData === null) {
       throw new Error('API response data is null')
     }
     
+    console.log('Response data type:', typeof responseData)
+    
     if (Array.isArray(responseData)) {
-      console.log('API response is an array with', responseData.length, 'items')
+      console.log('Response is an array with', responseData.length, 'items')
       carsData = responseData
     } else if (typeof responseData === 'object') {
-      console.log('API response is an object, checking for data arrays')
+      console.log('Response is an object, searching for car data array')
       
-      // Log available properties for debugging
+      // Log all top-level keys
       const keys = Object.keys(responseData)
       console.log('Response object keys:', keys.join(', '))
       
-      // Try to find any array property that might contain car data
-      let foundArray = false
+      // Try common property names that might contain car data
+      const possibleArrayProperties = ['cars', 'data', 'items', 'results', 'lista', 'vehicles', 'autos']
       
-      for (const key of keys) {
-        const value = responseData[key]
-        if (Array.isArray(value) && value.length > 0) {
-          console.log(`Found array at property "${key}" with ${value.length} items`)
-          carsData = value
-          foundArray = true
+      for (const prop of possibleArrayProperties) {
+        if (Array.isArray(responseData[prop]) && responseData[prop].length > 0) {
+          console.log(`Found array at property "${prop}" with ${responseData[prop].length} items`)
+          carsData = responseData[prop]
           break
         }
       }
       
-      if (!foundArray) {
-        // Last resort: try to use the object itself if it has car-like properties
-        if (responseData.id && responseData.marca) {
-          console.log('Response appears to be a single car object. Converting to array')
-          carsData = [responseData]
-        } else {
-          console.error('Unable to find cars data array in response')
-          console.error('Response structure:', JSON.stringify(responseData, null, 2).substring(0, 1000))
-          throw new Error('Could not find car data array in API response')
+      // If no array found in common properties, check all properties
+      if (carsData.length === 0) {
+        for (const key of keys) {
+          const value = responseData[key]
+          if (Array.isArray(value) && value.length > 0) {
+            console.log(`Found array at property "${key}" with ${value.length} items`)
+            carsData = value
+            break
+          }
         }
       }
-    } else {
-      console.error('Unexpected API response format:', typeof responseData)
-      throw new Error(`Invalid API response format: ${typeof responseData}`)
+      
+      // Last resort: check if the object itself looks like a car
+      if (carsData.length === 0 && responseData.id && (responseData.marca || responseData.brand)) {
+        console.log('Response appears to be a single car object. Converting to array')
+        carsData = [responseData]
+      }
+      
+      // If still no data, try creating a general array from object values
+      if (carsData.length === 0) {
+        console.log('No car array found in response, trying to extract from object values')
+        const allValues = Object.values(responseData)
+        
+        for (const value of allValues) {
+          if (Array.isArray(value) && value.length > 0) {
+            console.log(`Found an array value with ${value.length} items`)
+            carsData = value
+            break
+          }
+        }
+      }
     }
     
-    console.log(`Initially extracted ${carsData.length} records from API response`)
+    console.log(`Extracted ${carsData.length} records from API response`)
     
-    // Validate car data is an array
     if (!Array.isArray(carsData)) {
-      console.error('Extracted cars data is not an array:', typeof carsData)
-      throw new Error('Extracted car data is not an array')
+      console.error('Extracted data is not an array:', typeof carsData)
+      throw new Error('Failed to extract car data array from API response')
     }
     
-    // Log sample data
-    console.log('Sample of first car data (if available):', 
-                carsData.length > 0 ? JSON.stringify(carsData[0], null, 2) : 'No cars found')
+    if (carsData.length === 0) {
+      console.warn('No cars found in API response')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'No cars found in API response',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
+    }
     
-    // Use manual filtering instead of .filter to avoid issues
-    const filteredCars: CarData[] = []
-    const skipReasons: Record<string, number> = {}
+    // Log sample data for debugging
+    if (carsData.length > 0) {
+      console.log('Sample of first car:', JSON.stringify(carsData[0], null, 2))
+    }
     
-    console.log(`Starting to process ${carsData.length} car records...`)
+    // Validate and filter car data with explicit null/undefined checking
+    const filteredCars = []
+    const skipReasons = {}
     
     for (let i = 0; i < carsData.length; i++) {
       try {
         const car = carsData[i]
         
         // Skip null/undefined entries
-        if (!car) {
+        if (car === null || car === undefined) {
           console.warn(`Car at index ${i} is null or undefined, skipping`)
           skipReasons['null_or_undefined'] = (skipReasons['null_or_undefined'] || 0) + 1
           continue
@@ -213,43 +235,57 @@ Deno.serve(async (req) => {
           continue
         }
         
+        // Ensure all required properties exist or provide defaults
+        const validatedCar = {
+          id: car.id,
+          marca: car.marca || '',
+          modelo: car.modelo || '',
+          version: car.version || null,
+          year: car.year || '',
+          precio: car.precio || '',
+          imagen: car.imagen || null,
+          title: car.title || car.marca + ' ' + car.modelo || '',
+          url: car.url || null,
+          registro: car.registro || ''
+        }
+        
         // Skip entries without registro
-        if (!car.registro) {
-          console.warn(`Car ${car.id} has no registro property, skipping`)
+        if (!validatedCar.registro) {
+          console.warn(`Car ${validatedCar.id} has no registro property, skipping`)
           skipReasons['no_registro'] = (skipReasons['no_registro'] || 0) + 1
           continue
         }
         
         // Skip entries without year
-        if (!car.year) {
-          console.warn(`Car ${car.id} has no year property, skipping`)
+        if (!validatedCar.year) {
+          console.warn(`Car ${validatedCar.id} has no year property, skipping`)
           skipReasons['no_year'] = (skipReasons['no_year'] || 0) + 1
           continue
         }
         
-        // Parse year safely (it might be a string or number)
-        let carYear: number
+        // Safely parse year
+        let carYear
         try {
-          carYear = parseInt(car.year.toString(), 10)
+          carYear = parseInt(String(validatedCar.year), 10)
           if (isNaN(carYear)) {
-            console.warn(`Car ${car.id} has invalid year: ${car.year}, skipping`)
+            console.warn(`Car ${validatedCar.id} has invalid year: ${validatedCar.year}, skipping`)
             skipReasons['invalid_year'] = (skipReasons['invalid_year'] || 0) + 1
             continue
           }
         } catch (yearError) {
-          console.warn(`Error parsing year for car ${car.id}: ${yearError}, skipping`)
+          console.warn(`Error parsing year for car ${validatedCar.id}: ${yearError}, skipping`)
           skipReasons['year_parse_error'] = (skipReasons['year_parse_error'] || 0) + 1
           continue
         }
         
         // Apply filtering criteria
-        if (car.registro === 'Mexicano de agencia' && carYear >= 2019) {
-          filteredCars.push(car as CarData)
+        if (validatedCar.registro === 'Mexicano de agencia' && carYear >= 2019) {
+          filteredCars.push(validatedCar)
         } else {
           skipReasons['not_matching_criteria'] = (skipReasons['not_matching_criteria'] || 0) + 1
         }
       } catch (processingError) {
-        console.warn(`Error processing car at index ${i}:`, processingError)
+        console.error(`Error processing car at index ${i}:`, processingError)
         skipReasons['processing_error'] = (skipReasons['processing_error'] || 0) + 1
       }
     }
@@ -257,27 +293,22 @@ Deno.serve(async (req) => {
     console.log(`Filtered to ${filteredCars.length} cars matching criteria`)
     console.log('Skip reasons:', JSON.stringify(skipReasons, null, 2))
     
-    // Track processed car IDs
-    const processedCarIds = new Set<string>()
+    // Track processed car IDs to avoid duplicates
+    const processedCarIds = new Set()
     
     // Prepare array for upsert
     const carsToUpsert = []
-    let validCarsCount = 0
     
     // Process each car
     for (const car of filteredCars) {
       try {
-        // We already validated ID existence above, but double-check
-        if (!car.id) continue
-        
-        // Detect duplicates
+        // Skip duplicates
         if (processedCarIds.has(car.id)) {
           console.warn(`Skipping duplicate car ID: ${car.id}`)
           continue
         }
         
         processedCarIds.add(car.id)
-        validCarsCount++
         
         carsToUpsert.push({
           id: car.id,
@@ -295,14 +326,28 @@ Deno.serve(async (req) => {
         })
       } catch (carProcessError) {
         console.error(`Error preparing car ${car.id} for upsert:`, carProcessError)
-        // Continue with next car instead of failing entirely
       }
     }
     
-    console.log(`Prepared ${carsToUpsert.length} of ${validCarsCount} valid cars for upsert`)
+    console.log(`Prepared ${carsToUpsert.length} cars for upsert`)
+    
+    if (carsToUpsert.length === 0) {
+      console.warn('No cars to upsert after processing')
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'No valid cars found for upsert',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
+    }
     
     // Split large batches to avoid request size limits
-    const BATCH_SIZE = 200
+    const BATCH_SIZE = 100
     const batches = []
     
     for (let i = 0; i < carsToUpsert.length; i += BATCH_SIZE) {
@@ -313,6 +358,7 @@ Deno.serve(async (req) => {
     
     // Process each batch
     let totalUpserted = 0
+    let batchErrors = []
     
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i]
@@ -325,18 +371,27 @@ Deno.serve(async (req) => {
         
         if (upsertError) {
           console.error(`Error upserting batch ${i+1}:`, upsertError)
+          batchErrors.push({
+            batch: i+1,
+            error: upsertError.message
+          })
         } else {
           totalUpserted += batch.length
           console.log(`Successfully upserted batch ${i+1} (${batch.length} cars)`)
         }
       } catch (batchError) {
         console.error(`Error processing batch ${i+1}:`, batchError)
+        batchErrors.push({
+          batch: i+1,
+          error: batchError instanceof Error ? batchError.message : String(batchError)
+        })
       }
     }
     
     console.log(`Total cars upserted: ${totalUpserted}`)
     
     // Find car IDs to delete (existing cars not in the current API response)
+    let deletedCount = 0
     if (processedCarIds.size > 0) {
       const carIdsToDelete = Array.from(existingCarIds).filter(id => !processedCarIds.has(id as string))
       
@@ -344,15 +399,16 @@ Deno.serve(async (req) => {
         console.log(`Deleting ${carIdsToDelete.length} cars that are no longer in API`)
         
         try {
-          const { error: deleteError } = await supabase
+          const { error: deleteError, count } = await supabase
             .from('cars')
-            .delete()
+            .delete({ count: 'exact' })
             .in('id', carIdsToDelete)
           
           if (deleteError) {
             console.error(`Error deleting cars:`, deleteError)
           } else {
-            console.log(`Successfully deleted ${carIdsToDelete.length} cars`)
+            deletedCount = count || 0
+            console.log(`Successfully deleted ${deletedCount} cars`)
           }
         } catch (deleteError) {
           console.error(`Error in delete operation:`, deleteError)
@@ -368,12 +424,14 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${filteredCars.length} cars. Added/updated ${totalUpserted} cars.`,
+        message: `Processed ${filteredCars.length} cars. Added/updated ${totalUpserted} cars. Deleted ${deletedCount} cars.`,
         stats: {
           total_from_api: carsData.length,
           filtered: filteredCars.length,
           processed: processedCarIds.size,
-          upserted: totalUpserted
+          upserted: totalUpserted,
+          deleted: deletedCount,
+          batch_errors: batchErrors.length > 0 ? batchErrors : null
         },
         timestamp: new Date().toISOString()
       }),
@@ -383,12 +441,16 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
+    // Enhanced error logging
     console.error('Error updating cars:', error)
+    if (error instanceof Error) {
+      console.error('Error stack:', error.stack)
+    }
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       }),
       {
