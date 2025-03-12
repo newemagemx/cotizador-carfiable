@@ -9,7 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      quotations: {
+        Row: {
+          car_brand: string
+          car_model: string
+          car_price: string
+          car_year: string
+          created_at: string
+          down_payment_percentage: number
+          id: string
+          is_verified: boolean | null
+          selected_term: number | null
+          updated_at: string
+          user_email: string
+          user_name: string
+          user_phone: string
+          verification_code: string | null
+        }
+        Insert: {
+          car_brand: string
+          car_model: string
+          car_price: string
+          car_year: string
+          created_at?: string
+          down_payment_percentage: number
+          id?: string
+          is_verified?: boolean | null
+          selected_term?: number | null
+          updated_at?: string
+          user_email: string
+          user_name: string
+          user_phone: string
+          verification_code?: string | null
+        }
+        Update: {
+          car_brand?: string
+          car_model?: string
+          car_price?: string
+          car_year?: string
+          created_at?: string
+          down_payment_percentage?: number
+          id?: string
+          is_verified?: boolean | null
+          selected_term?: number | null
+          updated_at?: string
+          user_email?: string
+          user_name?: string
+          user_phone?: string
+          verification_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

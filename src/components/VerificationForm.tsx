@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CarData, UserData } from '@/types/forms';
+import { supabase } from "@/integrations/supabase/client";
 
 interface VerificationFormProps {
   onVerified: () => void;
@@ -82,17 +83,47 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     sendVerificationCode();
   }, []);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     setIsLoading(true);
     setError("");
     
     // Simulate verification process
-    setTimeout(() => {
+    setTimeout(async () => {
       if (verificationCode === expectedCode) {
-        toast({
-          title: "Verificación exitosa",
-          description: "Tu identidad ha sido verificada correctamente.",
-        });
+        try {
+          // Save verification data to Supabase
+          const { error: saveError } = await supabase
+            .from('quotations')
+            .insert({
+              car_brand: carData.brand,
+              car_model: carData.model,
+              car_year: carData.year,
+              car_price: carData.price,
+              down_payment_percentage: carData.downPaymentPercentage,
+              user_name: userData.name,
+              user_email: userData.email,
+              user_phone: userData.phone,
+              verification_code: verificationCode,
+              is_verified: true
+            });
+            
+          if (saveError) {
+            console.error("Error saving data:", saveError);
+            toast({
+              title: "Error",
+              description: "No se pudo guardar la cotización",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Verificación exitosa",
+              description: "Tu identidad ha sido verificada correctamente.",
+            });
+          }
+        } catch (err) {
+          console.error("Error during verification process:", err);
+        }
+        
         onVerified();
       } else {
         setError("El código ingresado no es válido. Inténtalo nuevamente.");

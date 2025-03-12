@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Car, Calendar, DollarSign, Percent, Download, Send } from "lucide-react";
 import { CarData, UserData } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuoteResultProps {
   onBack: () => void;
@@ -26,6 +27,29 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
 }) => {
   const [selectedTerm, setSelectedTerm] = useState<number>(36);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    // Update the quotation with the selected term
+    const updateQuotation = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('quotations')
+          .update({ selected_term: selectedTerm })
+          .eq('user_email', userData.email)
+          .eq('is_verified', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          console.error("Error updating selected term:", error);
+        }
+      } catch (err) {
+        console.error("Error in updating quotation:", err);
+      }
+    };
+    
+    updateQuotation();
+  }, [selectedTerm, userData.email]);
   
   // Calculate loan details
   const carPrice = parseInt(carData.price);

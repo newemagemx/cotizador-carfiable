@@ -59,7 +59,7 @@ const Index = () => {
             <CarForm key="car-form" onNext={handleCarFormSubmit} />
           )}
           
-          {currentStep === 1 && userData !== null && (
+          {currentStep === 1 && (
             <UserForm 
               key="user-form"
               onNext={handleUserFormSubmit} 
