@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone } from "lucide-react";
@@ -8,7 +8,6 @@ import { CarData, UserData } from '@/types/forms';
 import { formatPhoneDisplay } from '@/utils/phoneUtils';
 import { verifyCodeAndSaveData } from '@/components/verification/VerificationService';
 import { useVerificationCode } from '@/hooks/useVerificationCode';
-import CountryCodeSelector, { COUNTRY_CODES } from '@/components/verification/CountryCodeSelector';
 import VerificationCodeInput from '@/components/verification/VerificationCodeInput';
 import VerificationActions from '@/components/verification/VerificationActions';
 
@@ -25,7 +24,6 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
   carData,
   userData
 }) => {
-  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0].value); // Default to Mexico
   const { toast } = useToast();
   
   const {
@@ -42,15 +40,8 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     sendCode
   } = useVerificationCode({
     userData,
-    countryCode
+    countryCode: userData.countryCode || '+52' // Use country code from userData or default to +52
   });
-
-  // Effect to resend the code when country code changes
-  useEffect(() => {
-    if (countryCode) {
-      sendCode();
-    }
-  }, [countryCode]);
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -63,7 +54,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         expectedCode,
         carData,
         userData,
-        countryCode,
+        userData.countryCode || '+52',
         onVerified
       );
       
@@ -78,10 +69,6 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     if (canResend) {
       sendCode();
     }
-  };
-
-  const handleCountryCodeChange = (value: string) => {
-    setCountryCode(value);
   };
 
   return (
@@ -101,18 +88,11 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               </div>
               <h3 className="text-xl font-semibold tracking-tight">Verificación</h3>
               <p className="text-sm text-muted-foreground">
-                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{formatPhoneDisplay(userData.phone, countryCode)}</span>
+                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{formatPhoneDisplay(userData.phone, userData.countryCode || '+52')}</span>
               </p>
             </div>
 
             <div className="space-y-4">
-              {/* Country Code Selector */}
-              <CountryCodeSelector 
-                value={countryCode}
-                onChange={handleCountryCodeChange}
-                disabled={isLoading || isSendingSMS}
-              />
-              
               {/* Verification Code Input */}
               <VerificationCodeInput
                 value={verificationCode}

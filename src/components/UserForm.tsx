@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowLeft, User, Mail, Phone } from "lucide-react";
 import { UserData } from '@/types/forms';
+import CountryCodeSelector, { COUNTRY_CODES } from '@/components/verification/CountryCodeSelector';
 
 interface UserFormProps {
   onNext: (data: UserData) => void;
@@ -17,7 +18,8 @@ const UserForm: React.FC<UserFormProps> = ({ onNext, onBack }) => {
   const [formData, setFormData] = useState<UserData>({
     name: "",
     email: "",
-    phone: ""
+    phone: "",
+    countryCode: COUNTRY_CODES[0].value // Default to Mexico (+52)
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof UserData, string>>>({});
@@ -38,6 +40,13 @@ const UserForm: React.FC<UserFormProps> = ({ onNext, onBack }) => {
     setFormData({
       ...formData,
       phone: value
+    });
+  };
+
+  const handleCountryCodeChange = (value: string) => {
+    setFormData({
+      ...formData,
+      countryCode: value
     });
   };
 
@@ -139,6 +148,18 @@ const UserForm: React.FC<UserFormProps> = ({ onNext, onBack }) => {
                 {errors.email && (
                   <p className="text-red-500 text-sm mt-1">{errors.email}</p>
                 )}
+              </div>
+
+              {/* Country Code Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="countryCode" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Código de país
+                </Label>
+                <CountryCodeSelector 
+                  value={formData.countryCode}
+                  onChange={handleCountryCodeChange}
+                />
               </div>
 
               <div className="space-y-2">
