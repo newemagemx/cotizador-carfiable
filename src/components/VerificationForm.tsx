@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone } from "lucide-react";
@@ -44,6 +44,13 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     userData,
     countryCode
   });
+
+  // Effect to resend the code when country code changes
+  useEffect(() => {
+    if (countryCode) {
+      sendCode();
+    }
+  }, [countryCode]);
 
   const handleVerify = async () => {
     setIsLoading(true);
