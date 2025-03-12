@@ -6,6 +6,8 @@ import CarForm from '@/components/CarForm';
 import UserForm from '@/components/UserForm';
 import VerificationForm from '@/components/VerificationForm';
 import QuoteResult from '@/components/QuoteResult';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { CarData, UserData } from '@/types/forms';
 
 const Index = () => {
@@ -39,8 +41,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <Header />
+      
       <motion.div 
-        className="w-full max-w-md mx-auto space-y-6 py-6"
+        className="w-full max-w-md mx-auto space-y-6 py-6 flex-1"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -89,9 +93,7 @@ const Index = () => {
         </AnimatePresence>
       </motion.div>
       
-      <footer className="mt-auto mb-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Auto Quote Ninja. Todos los derechos reservados.
-      </footer>
+      <Footer />
     </div>
   );
 };

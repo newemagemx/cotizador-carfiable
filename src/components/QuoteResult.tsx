@@ -8,6 +8,7 @@ import { CarIcon } from "lucide-react"; // Import as CarIcon to avoid conflict
 import { CarData, UserData, CarDetails } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import Disclaimer from './Disclaimer';
 
 interface QuoteResultProps {
   onBack: () => void;
@@ -266,6 +267,9 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
                 ))}
               </Tabs>
             </div>
+
+            {/* Add disclaimer before buttons */}
+            <Disclaimer />
 
             <div className="grid grid-cols-2 gap-4">
               <Button
