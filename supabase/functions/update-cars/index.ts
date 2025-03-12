@@ -6,20 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Optimización: Reducir el modelo de datos
-interface CarData {
-  id: string
-  marca: string
-  modelo: string
-  version: string | null
-  year: string
-  precio: string
-  imagen: string | null
-  title: string
-  url: string | null
-  registro: string
-}
-
 Deno.serve(async (req) => {
   console.log('Request received for update-cars function');
   
@@ -71,8 +57,8 @@ async function processCars() {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase client created successfully');
     
-    // Optimización: URL de API simplificada con parámetros reducidos
-    const apiUrl = 'https://carfiable.mx/lista/?token=CAF001&year=2023,2024,2025&precio=500000,5000000&limit=50'
+    // Optimización: URL de API simplificada con parámetros reducidos para obtener coches más recientes
+    const apiUrl = 'https://carfiable.mx/lista/?token=CAF001&year=2022,2023,2024,2025&precio=500000,5000000&limit=30'
     console.log(`Fetching cars from API: ${apiUrl}`);
     
     // Optimización: Fetch con timeout
@@ -109,65 +95,42 @@ async function processCars() {
       // Extract car data array
       let carsData = [];
       
-      // Analizar estructura correcta basada en los logs
-      console.log('Response is an object, looking for data structure');
-      console.log('Object keys:', Object.keys(responseData));
-      
-      // Estructura esperada según logs: responseData.cars.data[]
+      // Estructura específica confirmada: responseData.cars.data[]
       if (responseData.cars && Array.isArray(responseData.cars.data)) {
         carsData = responseData.cars.data;
         console.log(`Found cars array in cars.data with ${carsData.length} items`);
-      } else if (responseData.cars && Array.isArray(responseData.cars)) {
-        carsData = responseData.cars;
-        console.log(`Found cars array directly in 'cars' property with ${carsData.length} items`);
       } else {
-        // Intentar buscar cualquier array en la respuesta
-        for (const key in responseData) {
-          if (Array.isArray(responseData[key])) {
-            carsData = responseData[key];
-            console.log(`Found array in property '${key}' with ${carsData.length} items`);
-            break;
-          } else if (responseData[key] && typeof responseData[key] === 'object' && responseData[key].data && Array.isArray(responseData[key].data)) {
-            carsData = responseData[key].data;
-            console.log(`Found array in property '${key}.data' with ${carsData.length} items`);
-            break;
-          }
-        }
+        console.error('Could not find expected cars.data array in response');
+        console.log('Response structure:', JSON.stringify(responseData).substring(0, 300) + '...');
+        return;
       }
       
-      // Mostrar una muestra de la estructura de datos para debug
-      console.log('Response data structure:', JSON.stringify(responseData).substring(0, 500) + '...');
-      
-      if (carsData.length === 0) {
-        console.error('Could not find car data in API response');
-        if (responseData.cars && typeof responseData.cars === 'object') {
-          console.log('Cars object structure:', JSON.stringify(responseData.cars).substring(0, 500) + '...');
-        }
-        return;
+      // Debug: Mostrar el primer elemento para verificar estructura
+      if (carsData.length > 0) {
+        console.log('First car data sample:', JSON.stringify(carsData[0]).substring(0, 500) + '...');
       }
       
       console.log(`Found ${carsData.length} cars in API response`);
       
-      // Optimización: Filtrado más eficiente y batch más pequeño
+      // Filtrar los coches que cumplen con los criterios
       console.log('Filtering car data');
       const validCars = carsData
         .filter(car => {
           if (!car || !car.id) {
             return false;
           }
-          // Log the first car to debug
-          if (carsData.indexOf(car) === 0) {
-            console.log('First car sample:', JSON.stringify(car));
-          }
           
-          // Adaptado para ser más flexible con el campo registro
-          return (car.registro === 'Mexicano de agencia' || car.registro?.includes('Mexicano')) && 
-                 car.year && 
-                 parseInt(String(car.year), 10) >= 2022;
+          // Criterio flexible para el registro (mexicano de agencia o cualquier mexicano)
+          const validRegistro = car.registro === 'Mexicano de agencia' || 
+                               (car.registro && car.registro.includes('Mexicano'));
+          
+          // Verificar año >= 2022
+          const validYear = car.year && parseInt(String(car.year), 10) >= 2022;
+          
+          return validRegistro && validYear;
         })
-        .slice(0, 30) // Limitamos a max 30 coches para procesamiento más rápido
         .map(car => {
-          // Determinar la URL de la imagen
+          // Determinar la URL de la imagen (con prioridad)
           let imageUrl = null;
           if (car.imagen) {
             imageUrl = car.imagen;
@@ -177,6 +140,9 @@ async function processCars() {
             imageUrl = car.cover;
           }
           
+          // Crear un título si no existe
+          const title = car.title || `${car.marca} ${car.modelo} ${car.year}`;
+          
           return {
             id: car.id,
             brand: car.marca || '',
@@ -185,7 +151,7 @@ async function processCars() {
             year: car.year || '',
             price: car.precio || '',
             image_url: imageUrl,
-            title: car.title || `${car.marca} ${car.modelo} ${car.year}`,
+            title: title,
             url: car.url || null,
             registration_type: car.registro || '',
             last_checked: new Date().toISOString(),
@@ -200,17 +166,17 @@ async function processCars() {
         return;
       }
       
-      // Optimización: Procesar en batches más pequeños
-      const BATCH_SIZE = 5;
+      // Procesar en batches más pequeños (3 coches por batch)
+      const BATCH_SIZE = 3;
       const batches = [];
       
       for (let i = 0; i < validCars.length; i += BATCH_SIZE) {
         batches.push(validCars.slice(i, i + BATCH_SIZE));
       }
       
-      console.log(`Split cars into ${batches.length} batches of ${BATCH_SIZE} each`);
+      console.log(`Split cars into ${batches.length} batches of up to ${BATCH_SIZE} each`);
       
-      // Procesar batches secuencialmente para evitar problemas
+      // Procesar batches secuencialmente
       let totalUpserted = 0;
       
       for (let i = 0; i < batches.length; i++) {
@@ -218,6 +184,11 @@ async function processCars() {
         console.log(`Processing batch ${i+1}/${batches.length} with ${batch.length} cars`);
         
         try {
+          // Log the exact data being sent for the first batch to debug
+          if (i === 0) {
+            console.log('First batch data example:', JSON.stringify(batch[0]));
+          }
+          
           console.log(`Upserting batch ${i+1} to database`);
           const { data, error } = await supabase
             .from('cars')
@@ -232,13 +203,12 @@ async function processCars() {
         } catch (err) {
           console.error(`Error processing batch ${i+1}:`, err);
           console.error('Error stack:', err.stack);
-          console.error('First car in failed batch:', JSON.stringify(batch[0]));
         }
         
-        // Pequeña pausa entre batches para evitar sobrecarga
+        // Pausa más larga entre batches (1 segundo)
         if (i < batches.length - 1) {
-          console.log('Pausing between batches');
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('Pausing between batches (1000ms)');
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       
