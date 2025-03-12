@@ -99,18 +99,21 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
             </div>
 
             <div className="space-y-4">
+              {/* Country Code Selector */}
               <CountryCodeSelector 
                 value={countryCode}
                 onChange={handleCountryCodeChange}
                 disabled={isLoading || isSendingSMS}
               />
               
+              {/* Verification Code Input */}
               <VerificationCodeInput
                 value={verificationCode}
                 onChange={handleInputChange}
                 error={error}
               />
               
+              {/* Action Buttons */}
               <VerificationActions
                 onVerify={handleVerify}
                 onResend={handleResend}
