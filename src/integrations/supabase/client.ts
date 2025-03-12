@@ -21,9 +21,18 @@ export const updateCars = async () => {
       return { success: false, error };
     }
     
+    console.log('Edge function response:', data);
     return { success: true, data };
   } catch (err) {
     console.error('Exception invoking update-cars:', err);
     return { success: false, error: err };
   }
 };
+
+// Add a global window declaration for browser usage
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.__supabaseClient = supabase;
+  // @ts-ignore
+  window.__updateCars = updateCars;
+}
