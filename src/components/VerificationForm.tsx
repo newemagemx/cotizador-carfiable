@@ -47,6 +47,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     setExpectedCode(code);
     
     try {
+      console.log("Calling send-verification-sms Edge Function");
       // Call the Edge Function to send SMS
       const { data, error } = await supabase.functions.invoke('send-verification-sms', {
         body: {
@@ -62,14 +63,14 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
           description: "No se pudo enviar el SMS. Intenta nuevamente.",
           variant: "destructive",
         });
-        // For demo purposes, we'll display the code in the console
+        // For demo purposes, we'll display the code in the console and as a toast
         console.log("Verification code:", code);
         toast({
-          title: "Demo mode",
-          description: `Código para uso en demo: ${code}`,
-          variant: "destructive",
+          title: "Código de verificación (demo)",
+          description: `Código: ${code}`,
         });
       } else {
+        console.log("SMS sent successfully:", data);
         toast({
           title: "Código enviado",
           description: `Se ha enviado un código de verificación a ${userData.phone}`,
@@ -82,12 +83,11 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         description: "Ocurrió un error al enviar el SMS",
         variant: "destructive",
       });
-      // For demo purposes, we'll display the code in the console
+      // For demo purposes, we'll display the code in the console and as a toast
       console.log("Verification code:", code);
       toast({
-        title: "Demo mode",
-        description: `Código para uso en demo: ${code}`,
-        variant: "destructive",
+        title: "Código de verificación (demo)",
+        description: `Código: ${code}`,
       });
     } finally {
       setIsLoading(false);
@@ -180,6 +180,24 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     }
   };
 
+  // Format phone number display for UI
+  const formatPhoneDisplay = (phone: string) => {
+    if (!phone) return '';
+    // Ensure we're working with digits only
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    // Add country code if missing
+    let formattedPhone = digitsOnly;
+    if (digitsOnly.length === 10) {
+      formattedPhone = `+52 ${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
+    } else if (digitsOnly.length > 10) {
+      // Assume it already has country code
+      formattedPhone = `+${digitsOnly.substring(0, 2)} ${digitsOnly.substring(2, 5)} ${digitsOnly.substring(5, 8)} ${digitsOnly.substring(8)}`;
+    }
+    
+    return formattedPhone;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -197,7 +215,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               </div>
               <h3 className="text-xl font-semibold tracking-tight">Verificación</h3>
               <p className="text-sm text-muted-foreground">
-                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{userData.phone}</span>
+                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{formatPhoneDisplay(userData.phone)}</span>
               </p>
             </div>
 
