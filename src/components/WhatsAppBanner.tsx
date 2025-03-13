@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, MessageCircle, Smartphone, Whatsapp } from 'lucide-react';
+import { Loader2, MessageCircle, Smartphone } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const WhatsAppBanner: React.FC = () => {
