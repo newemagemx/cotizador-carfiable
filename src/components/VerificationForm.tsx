@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone } from "lucide-react";
@@ -25,6 +24,29 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
   userData
 }) => {
   const { toast } = useToast();
+  
+  // Calculate loan details for webhook usage
+  const carPrice = parseInt(carData.price);
+  const downPaymentPercentage = carData.downPaymentPercentage;
+  const downPaymentAmount = carPrice * (downPaymentPercentage / 100);
+  const loanAmount = carPrice - downPaymentAmount;
+  const annualInterestRate = 12.99; // Fixed interest rate
+  const monthlyInterestRate = annualInterestRate / 100 / 12;
+  const defaultTerm = 36; // Default term as 36 months
+  
+  // Calculate monthly payment
+  const calculateMonthlyPayment = (term: number) => {
+    const n = term; // Number of months
+    const r = monthlyInterestRate; // Monthly interest rate
+    
+    // Formula: P = L[r(1+r)^n]/[(1+r)^n-1]
+    const monthlyPayment = loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    
+    return Math.round(monthlyPayment);
+  };
+  
+  // Pre-calculate monthly payment for default term
+  const monthlyPayment = calculateMonthlyPayment(defaultTerm);
   
   const {
     verificationCode,
@@ -55,6 +77,8 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         carData,
         userData,
         userData.countryCode || '+52',
+        defaultTerm,
+        monthlyPayment,
         onVerified
       );
       

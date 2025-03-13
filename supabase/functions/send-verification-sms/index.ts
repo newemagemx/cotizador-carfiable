@@ -40,6 +40,9 @@ Deno.serve(async (req) => {
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`
     console.log(`Normalized phone: ${normalizedPhone}`)
     
+    // Updated SMS message with customized text
+    const customMessage = `Tu código de verificación del Cotizador Carfiable es: ${verificationCode}`
+    
     // Send SMS via Twilio API
     const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
     console.log(`Using Twilio endpoint: ${twilioEndpoint}`)
@@ -47,7 +50,7 @@ Deno.serve(async (req) => {
     const twilioBody = new URLSearchParams({
       From: fromPhone,
       To: normalizedPhone,
-      Body: `Tu código de verificación Auto Quote Ninja es: ${verificationCode}`,
+      Body: customMessage,
     }).toString()
     
     console.log('Sending request to Twilio...')

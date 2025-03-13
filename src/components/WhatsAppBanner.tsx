@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle } from 'lucide-react';
+import { Loader2, MessageCircle, Smartphone, Whatsapp } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const WhatsAppBanner: React.FC = () => {
@@ -20,7 +20,7 @@ const WhatsAppBanner: React.FC = () => {
         <Button 
           className="rounded-full shadow-lg bg-green-500 hover:bg-green-600 text-white px-4 h-12"
         >
-          <MessageCircle className="mr-2 h-5 w-5" />
+          <Smartphone className="mr-2 h-5 w-5" />
           Solicitar asesoría por WhatsApp
         </Button>
       </a>

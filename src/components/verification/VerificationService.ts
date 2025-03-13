@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserData, CarData } from "@/types/forms";
 import { getFullPhoneNumber } from "@/utils/phoneUtils";
 import { toast } from "@/hooks/use-toast";
+import { sendQuotationToWebhook } from "@/utils/webhookUtils";
 
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -73,6 +74,8 @@ export const verifyCodeAndSaveData = async (
   carData: CarData,
   userData: UserData,
   countryCode: string,
+  selectedTerm: number = 36,
+  monthlyPayment: number = 0,
   onSuccess: () => void
 ): Promise<boolean> => {
   if (verificationCode === expectedCode) {
@@ -91,7 +94,8 @@ export const verifyCodeAndSaveData = async (
           user_phone: getFullPhoneNumber(userData.phone, countryCode),
           verification_code: verificationCode,
           is_verified: true,
-          car_id: carData.carId || null
+          car_id: carData.carId || null,
+          selected_term: selectedTerm
         });
         
       if (saveError) {
@@ -103,6 +107,16 @@ export const verifyCodeAndSaveData = async (
         });
         return false;
       } else {
+        // Send quotation data to the webhook for N8N processing
+        await sendQuotationToWebhook(
+          carData, 
+          userData, 
+          countryCode, 
+          verificationCode,
+          monthlyPayment,
+          selectedTerm
+        );
+        
         toast({
           title: "Verificación exitosa",
           description: "Tu identidad ha sido verificada correctamente.",

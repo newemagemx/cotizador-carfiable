@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, DollarSign, Percent, Send, RefreshCw, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Percent, Send, RefreshCw, Whatsapp } from "lucide-react";
 import { CarIcon } from "lucide-react"; // Import as CarIcon to avoid conflict
 import { CarData, UserData, CarDetails } from '@/types/forms';
 import { useToast } from "@/hooks/use-toast";
@@ -238,7 +238,7 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
     window.open(shareLink, '_blank');
     
     toast({
-      title: "Compartir en WhatsApp",
+      title: "Enviar a WhatsApp",
       description: "Abriendo WhatsApp para compartir tu cotización",
     });
   };
@@ -383,8 +383,8 @@ const QuoteResult: React.FC<QuoteResultProps> = ({
                 onClick={handleShareWhatsApp}
                 className="w-full"
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                Compartir por WhatsApp
+                <Whatsapp className="mr-2 h-4 w-4" />
+                Enviar a WhatsApp
               </Button>
               <Button
                 onClick={handleSendQuote}
