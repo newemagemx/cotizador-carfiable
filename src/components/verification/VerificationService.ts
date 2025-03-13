@@ -5,6 +5,10 @@ import { getFullPhoneNumber } from "@/utils/phoneUtils";
 import { toast } from "@/hooks/use-toast";
 import { sendQuotationToWebhook } from "@/utils/webhookUtils";
 
+// Test bypass credentials
+const TEST_PHONE = "+521234567890";
+const TEST_CODE = "0000";
+
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -17,9 +21,21 @@ export const sendVerificationCode = async (
   onError?: () => void
 ): Promise<void> => {
   try {
+    // Handle test bypass phone number
+    const fullPhoneNumber = getFullPhoneNumber(userData.phone, countryCode);
+    if (fullPhoneNumber === TEST_PHONE) {
+      console.log("Using test phone number - bypassing SMS sending");
+      console.log("Verification code for test:", TEST_CODE);
+      toast({
+        title: "Modo de prueba detectado",
+        description: `Usando teléfono de prueba. Código: ${TEST_CODE}`,
+      });
+      if (onSuccess) onSuccess();
+      return;
+    }
+    
     console.log("Calling send-verification-sms Edge Function");
     // Call the Edge Function to send SMS
-    const fullPhoneNumber = getFullPhoneNumber(userData.phone, countryCode);
     console.log(`Sending SMS to: ${fullPhoneNumber}`);
     
     const { data, error } = await supabase.functions.invoke('send-verification-sms', {
@@ -78,6 +94,62 @@ export const verifyCodeAndSaveData = async (
   monthlyPayment: number = 0,
   onSuccess: () => void
 ): Promise<boolean> => {
+  // Handle test bypass scenario
+  const fullPhoneNumber = getFullPhoneNumber(userData.phone, countryCode);
+  if (fullPhoneNumber === TEST_PHONE && verificationCode === TEST_CODE) {
+    console.log("Using test credentials - bypassing verification check");
+    try {
+      // Save verification data to Supabase
+      const { error: saveError } = await supabase
+        .from('quotations')
+        .insert({
+          car_brand: carData.brand,
+          car_model: carData.model,
+          car_year: carData.year,
+          car_price: carData.price,
+          down_payment_percentage: carData.downPaymentPercentage,
+          user_name: userData.name,
+          user_email: userData.email,
+          user_phone: fullPhoneNumber,
+          verification_code: verificationCode,
+          is_verified: true,
+          car_id: carData.carId || null,
+          selected_term: selectedTerm
+        });
+        
+      if (saveError) {
+        console.error("Error saving data:", saveError);
+        toast({
+          title: "Error",
+          description: "No se pudo guardar la cotización",
+          variant: "destructive",
+        });
+        return false;
+      } else {
+        // Send quotation data to the webhook for N8N processing
+        await sendQuotationToWebhook(
+          carData, 
+          userData, 
+          countryCode, 
+          verificationCode,
+          monthlyPayment,
+          selectedTerm
+        );
+        
+        toast({
+          title: "Verificación exitosa (Modo prueba)",
+          description: "Se ha verificado usando las credenciales de prueba.",
+        });
+        onSuccess();
+        return true;
+      }
+    } catch (err) {
+      console.error("Error during test verification process:", err);
+      return false;
+    }
+  }
+
+  // Regular verification process
   if (verificationCode === expectedCode) {
     try {
       // Save verification data to Supabase
@@ -91,7 +163,7 @@ export const verifyCodeAndSaveData = async (
           down_payment_percentage: carData.downPaymentPercentage,
           user_name: userData.name,
           user_email: userData.email,
-          user_phone: getFullPhoneNumber(userData.phone, countryCode),
+          user_phone: fullPhoneNumber,
           verification_code: verificationCode,
           is_verified: true,
           car_id: carData.carId || null,
