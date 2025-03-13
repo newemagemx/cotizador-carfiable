@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserData, CarData } from "@/types/forms";
 import { getFullPhoneNumber } from "@/utils/phoneUtils";
@@ -10,6 +11,45 @@ const TEST_CODE = "000000";
 
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/**
+ * Check if a phone has been verified in the last 30 days
+ */
+export const checkIfPhoneVerified = async (phone: string, countryCode: string): Promise<boolean> => {
+  try {
+    const fullPhoneNumber = getFullPhoneNumber(phone, countryCode);
+    
+    // Always return true for test phone
+    if (fullPhoneNumber === TEST_PHONE) {
+      return true;
+    }
+    
+    // Get the date from 30 days ago
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Check if the phone has been verified in the last 30 days
+    const { data, error } = await supabase
+      .from('quotations')
+      .select('created_at')
+      .eq('user_phone', fullPhoneNumber)
+      .eq('is_verified', true)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (error) {
+      console.error("Error checking phone verification:", error);
+      return false;
+    }
+    
+    // If we have data, the phone has been verified in the last 30 days
+    return data && data.length > 0;
+  } catch (err) {
+    console.error("Error during phone verification check:", err);
+    return false;
+  }
 };
 
 export const sendVerificationCode = async (

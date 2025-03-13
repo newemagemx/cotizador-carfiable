@@ -28,8 +28,19 @@ export const createWhatsAppShareLink = (
     `⬇️ Enganche: ${downPayment}%\n` +
     `📅 Plazo: ${term} meses\n` +
     `💵 Mensualidad: $${monthlyPayment}\n\n` +
-    `Calcula tu propio crédito en: https://cotizador.carfiable.mx/cotizador?ref=${quoteId}`
+    `Calcula tu propio crédito en: https://cotizador.carfiable.mx?ref=${quoteId}`
   );
   
   return `https://api.whatsapp.com/send?text=${text}`;
+};
+
+/**
+ * Get the reference ID from the URL
+ */
+export const getReferenceId = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('ref');
+  }
+  return null;
 };
