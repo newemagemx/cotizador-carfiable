@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { generateVerificationCode, sendVerificationCode } from '@/components/verification/VerificationService';
 import { UserData } from '@/types/forms';
@@ -49,7 +48,7 @@ export const useVerificationCode = ({ userData, countryCode }: UseVerificationCo
     
     // For test number, use fixed test code
     if (isTestPhone) {
-      setExpectedCode("0000");
+      setExpectedCode("000000");
     } else {
       // Generate a random code for real numbers
       const code = generateVerificationCode();

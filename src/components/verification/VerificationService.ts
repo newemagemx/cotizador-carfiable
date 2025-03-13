@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { UserData, CarData } from "@/types/forms";
 import { getFullPhoneNumber } from "@/utils/phoneUtils";
@@ -7,7 +6,7 @@ import { sendQuotationToWebhook } from "@/utils/webhookUtils";
 
 // Test bypass credentials
 const TEST_PHONE = "+521234567890";
-const TEST_CODE = "0000";
+const TEST_CODE = "000000";
 
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
