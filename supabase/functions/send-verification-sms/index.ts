@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`
     console.log(`Normalized phone: ${normalizedPhone}`)
     
-    // Updated SMS message with customized text
-    const customMessage = `Tu código de verificación del Cotizador Carfiable es: ${verificationCode}`
+    // Updated SMS message without the verification code
+    const customMessage = `Tu código de verificación del Cotizador Carfiable ha sido generado. Sigue las instrucciones en pantalla para completar tu cotización.`
     
     // Send SMS via Twilio API
     const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
