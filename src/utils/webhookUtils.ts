@@ -2,11 +2,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CarData, UserData } from "@/types/forms";
 
+// Fixed webhook endpoint - using the confirmed working URL directly
+const FIXED_WEBHOOK_ENDPOINT = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
+
 /**
  * Retrieve the webhook endpoint from app_config table
  */
 export const getWebhookEndpoint = async (): Promise<string | null> => {
   try {
+    // Log to verify this function is being called
+    console.log("Retrieving webhook endpoint from app_config...");
+    
     const { data, error } = await supabase
       .from('app_config')
       .select('value')
@@ -15,13 +21,21 @@ export const getWebhookEndpoint = async (): Promise<string | null> => {
     
     if (error) {
       console.error("Error retrieving webhook endpoint:", error);
-      return null;
+      console.log("Using fixed webhook endpoint as fallback:", FIXED_WEBHOOK_ENDPOINT);
+      return FIXED_WEBHOOK_ENDPOINT;
     }
     
-    return data?.value || null;
+    if (!data || !data.value) {
+      console.warn("No webhook endpoint found in app_config, using fixed endpoint:", FIXED_WEBHOOK_ENDPOINT);
+      return FIXED_WEBHOOK_ENDPOINT;
+    }
+    
+    console.log("Retrieved webhook endpoint from app_config:", data.value);
+    return data.value;
   } catch (err) {
     console.error("Exception retrieving webhook endpoint:", err);
-    return null;
+    console.log("Using fixed webhook endpoint as fallback:", FIXED_WEBHOOK_ENDPOINT);
+    return FIXED_WEBHOOK_ENDPOINT;
   }
 };
 
@@ -30,7 +44,8 @@ export const getWebhookEndpoint = async (): Promise<string | null> => {
  */
 export const testWebhook = async (specificEndpoint?: string): Promise<{ success: boolean, message: string, webhookUrl?: string }> => {
   try {
-    const webhookEndpoint = specificEndpoint || await getWebhookEndpoint();
+    // Use the provided endpoint, or the fixed endpoint as default
+    const webhookEndpoint = specificEndpoint || FIXED_WEBHOOK_ENDPOINT;
     
     if (!webhookEndpoint) {
       return { 
@@ -145,17 +160,22 @@ export const sendQuotationToWebhook = async (
   selectedTerm: number
 ): Promise<boolean> => {
   try {
-    // Get the webhook endpoint from configuration or use a specific endpoint
-    const webhookEndpoint = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
+    // Use the fixed webhook endpoint directly to avoid any retrieval issues
+    const webhookEndpoint = FIXED_WEBHOOK_ENDPOINT;
+    
+    console.log("Using webhook endpoint for quotation:", webhookEndpoint);
     
     if (!webhookEndpoint) {
       console.error("No webhook endpoint configured");
       return false;
     }
     
+    // Generate a unique ID for tracking
+    const quotationId = generateUniqueId();
+    
     // Prepare the quotation data for the webhook
     const quotationData = {
-      id: generateUniqueId(),
+      id: quotationId,
       timestamp: new Date().toISOString(),
       car: {
         brand: carData.brand,
@@ -295,7 +315,7 @@ const generateUniqueId = (): string => {
  * Get the current webhook configuration
  */
 export const getWebhookConfig = async (): Promise<{ configured: boolean, url: string | null }> => {
-  const webhookUrl = await getWebhookEndpoint();
+  const webhookUrl = FIXED_WEBHOOK_ENDPOINT;
   return {
     configured: !!webhookUrl,
     url: webhookUrl

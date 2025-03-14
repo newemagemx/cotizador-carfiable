@@ -133,6 +133,8 @@ export const verifyCodeAndSaveData = async (
   monthlyPayment: number = 0,
   onSuccess: () => void
 ): Promise<boolean> => {
+  console.log("Verifying code and preparing to save data & send to webhook...");
+  
   // Handle test bypass scenario
   const fullPhoneNumber = getFullPhoneNumber(userData.phone, countryCode);
   if (fullPhoneNumber === TEST_PHONE && verificationCode === TEST_CODE) {
@@ -165,8 +167,10 @@ export const verifyCodeAndSaveData = async (
         });
         return false;
       } else {
-        // Send quotation data to the webhook for N8N processing
-        await sendQuotationToWebhook(
+        console.log("Data saved successfully, now sending to webhook");
+        
+        // Send quotation data to the webhook
+        const webhookSuccess = await sendQuotationToWebhook(
           carData, 
           userData, 
           countryCode, 
@@ -174,6 +178,8 @@ export const verifyCodeAndSaveData = async (
           monthlyPayment,
           selectedTerm
         );
+        
+        console.log("Webhook sending result:", webhookSuccess ? "Success" : "Failed");
         
         toast({
           title: "Verificación exitosa (Modo prueba)",
@@ -190,6 +196,7 @@ export const verifyCodeAndSaveData = async (
 
   // Regular verification process
   if (verificationCode === expectedCode) {
+    console.log("Verification code matches, proceeding with data saving");
     try {
       // Save verification data to Supabase
       const { error: saveError } = await supabase
@@ -218,8 +225,10 @@ export const verifyCodeAndSaveData = async (
         });
         return false;
       } else {
-        // Send quotation data to the webhook for N8N processing
-        await sendQuotationToWebhook(
+        console.log("Data saved successfully, now sending to webhook");
+        
+        // Send quotation data to the webhook
+        const webhookSuccess = await sendQuotationToWebhook(
           carData, 
           userData, 
           countryCode, 
@@ -227,6 +236,8 @@ export const verifyCodeAndSaveData = async (
           monthlyPayment,
           selectedTerm
         );
+        
+        console.log("Webhook sending result:", webhookSuccess ? "Success" : "Failed");
         
         toast({
           title: "Verificación exitosa",
@@ -240,5 +251,6 @@ export const verifyCodeAndSaveData = async (
       return false;
     }
   }
+  console.log("Verification code does not match. Expected:", expectedCode, "Got:", verificationCode);
   return false;
 };

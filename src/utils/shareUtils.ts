@@ -45,7 +45,7 @@ export const getReferenceId = (): string | null => {
   return null;
 };
 
-// Direct import of webhookUtils to avoid dynamic imports that were causing errors
+// Import webhook utilities directly
 import { 
   testWebhook, 
   getWebhookHistory, 
@@ -64,7 +64,7 @@ export const testWebhookIntegration = async (): Promise<void> => {
     console.log("%c Running webhook test...", "font-style: italic;");
     
     try {
-      // Test with the specific webhook URL if provided
+      // Use the fixed endpoint
       const specificWebhookUrl = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
       console.log("%c Using webhook URL:", "font-weight: bold;", specificWebhookUrl);
       
@@ -101,7 +101,7 @@ export const testWebhookIntegration = async (): Promise<void> => {
       }
       
       console.log("%c 💡 HELP", "background: #FFA500; color: #000; padding: 4px; border-radius: 4px; font-weight: bold;");
-      console.log("1. Ensure your webhook URL is set in Supabase's 'app_config' table with key 'webhook_endpoint'");
+      console.log("1. Ensure your webhook URL is correctly configured");
       console.log("2. Your webhook should handle GET requests with URL parameters");
       console.log("3. Look at the Network tab in DevTools to check the actual HTTP requests");
       console.log("4. To view full request details, check the webhook history above");
