@@ -28,7 +28,8 @@ export const createWhatsAppShareLink = (
     `⬇️ Enganche: ${downPayment}%\n` +
     `📅 Plazo: ${term} meses\n` +
     `💵 Mensualidad: $${monthlyPayment}\n\n` +
-    `Calcula tu propio crédito en: https://cotizador.carfiable.mx?ref=${quoteId}`
+    `Calcula tu propio crédito en: https://cotizador.carfiable.mx?ref=${quoteId}\n\n` +
+    `Código de cotización: ${quoteId}`
   );
   
   return `https://api.whatsapp.com/send?text=${text}`;
