@@ -28,9 +28,9 @@ export const getWebhookEndpoint = async (): Promise<string | null> => {
 /**
  * Test the configured webhook endpoint
  */
-export const testWebhook = async (): Promise<{ success: boolean, message: string, webhookUrl?: string }> => {
+export const testWebhook = async (specificEndpoint?: string): Promise<{ success: boolean, message: string, webhookUrl?: string }> => {
   try {
-    const webhookEndpoint = await getWebhookEndpoint();
+    const webhookEndpoint = specificEndpoint || await getWebhookEndpoint();
     
     if (!webhookEndpoint) {
       return { 
@@ -59,6 +59,15 @@ export const testWebhook = async (): Promise<{ success: boolean, message: string
     console.log("%c URL", "font-weight: bold;", fullUrl);
     console.log("%c Payload", "font-weight: bold;", testPayload);
     
+    // Save the request to history
+    saveWebhookHistory({
+      timestamp: new Date().toISOString(),
+      url: fullUrl,
+      method: 'GET',
+      data: testPayload,
+      type: 'test'
+    });
+    
     // Send the test payload to the webhook using GET
     const response = await fetch(fullUrl, {
       method: 'GET',
@@ -72,6 +81,14 @@ export const testWebhook = async (): Promise<{ success: boolean, message: string
       console.log("%c ❌ WEBHOOK TEST FAILED ❌", "background: #FF6347; color: #FFF; padding: 4px; border-radius: 4px; font-weight: bold;");
       console.log("%c Status", "font-weight: bold;", response.status, response.statusText);
       console.log("%c Error", "font-weight: bold;", errorText);
+      
+      // Save the error response
+      saveWebhookResponse({
+        id: testPayload.id,
+        success: false,
+        status: response.status,
+        response: errorText
+      });
       
       return {
         success: false,
@@ -91,6 +108,14 @@ export const testWebhook = async (): Promise<{ success: boolean, message: string
       console.log("%c ✅ WEBHOOK TEST SUCCEEDED ✅", "background: #32CD32; color: #FFF; padding: 4px; border-radius: 4px; font-weight: bold;");
       console.log("%c Response (Text)", "font-weight: bold;", responseData);
     }
+    
+    // Save the successful response
+    saveWebhookResponse({
+      id: testPayload.id,
+      success: true,
+      status: response.status,
+      response: responseData
+    });
     
     return {
       success: true,
@@ -120,8 +145,8 @@ export const sendQuotationToWebhook = async (
   selectedTerm: number
 ): Promise<boolean> => {
   try {
-    // Get the webhook endpoint from configuration
-    const webhookEndpoint = await getWebhookEndpoint();
+    // Get the webhook endpoint from configuration or use a specific endpoint
+    const webhookEndpoint = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
     
     if (!webhookEndpoint) {
       console.error("No webhook endpoint configured");
@@ -377,3 +402,15 @@ export const clearWebhookData = () => {
   localStorage.removeItem('webhook_history');
   localStorage.removeItem('webhook_responses');
 };
+
+// Add the webhook utility functions to the window object for easy console access
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.testWebhook = testWebhook;
+  // @ts-ignore
+  window.getWebhookHistory = getWebhookHistory;
+  // @ts-ignore
+  window.getWebhookResponses = getWebhookResponses;
+  // @ts-ignore
+  window.clearWebhookData = clearWebhookData;
+}

@@ -45,20 +45,30 @@ export const getReferenceId = (): string | null => {
   return null;
 };
 
+// Direct import of webhookUtils to avoid dynamic imports that were causing errors
+import { 
+  testWebhook, 
+  getWebhookHistory, 
+  getWebhookResponses,
+  clearWebhookData,
+  getWebhookConfig
+} from './webhookUtils';
+
 /**
- * Test the webhook integration
+ * Test the webhook integration with a specific URL
  * This function is useful for debugging webhook issues
  */
 export const testWebhookIntegration = async (): Promise<void> => {
   try {
-    // Import dynamically with the correct path
-    const { testWebhook, getWebhookHistory, getWebhookResponses } = await import('./webhookUtils');
-    
     console.log("%c 🔍 WEBHOOK DEBUGGING HELPER 🔍", "background: #8A2BE2; color: #FFF; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 14px;");
     console.log("%c Running webhook test...", "font-style: italic;");
     
     try {
-      const result = await testWebhook();
+      // Test with the specific webhook URL if provided
+      const specificWebhookUrl = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
+      console.log("%c Using webhook URL:", "font-weight: bold;", specificWebhookUrl);
+      
+      const result = await testWebhook(specificWebhookUrl);
       
       if (result.success) {
         console.log("%c ✅ Webhook test successful!", "color: #32CD32; font-weight: bold;");
@@ -95,7 +105,7 @@ export const testWebhookIntegration = async (): Promise<void> => {
       console.log("2. Your webhook should handle GET requests with URL parameters");
       console.log("3. Look at the Network tab in DevTools to check the actual HTTP requests");
       console.log("4. To view full request details, check the webhook history above");
-      console.log("5. To test again, run: window.testWebhook = async () => { const { testWebhookIntegration } = await import('@/utils/shareUtils'); await testWebhookIntegration(); }; window.testWebhook();");
+      console.log("5. To test again, run: window.testWebhook = async () => { await testWebhookIntegration(); }; window.testWebhook();");
       
     } catch (error) {
       console.log("%c ❌ Error running webhook test:", "color: #FF6347; font-weight: bold;", error);
@@ -110,9 +120,6 @@ export const testWebhookIntegration = async (): Promise<void> => {
  */
 export const showWebhookDebugInfo = async (): Promise<void> => {
   try {
-    // Import dynamically with the correct path
-    const { getWebhookConfig, getWebhookHistory, getWebhookResponses, clearWebhookData } = await import('./webhookUtils');
-    
     try {
       console.log("%c 🔍 WEBHOOK DEBUGGING INFORMATION 🔍", "background: #8A2BE2; color: #FFF; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 14px;");
       
@@ -168,14 +175,22 @@ export const showWebhookDebugInfo = async (): Promise<void> => {
       }
       
       console.log("%c Helper Functions", "background: #4682B4; color: #FFF; padding: 4px; border-radius: 4px; font-weight: bold;");
-      console.log("1. Test webhook: window.testWebhook = async () => { const { testWebhookIntegration } = await import('@/utils/shareUtils'); await testWebhookIntegration(); }; window.testWebhook();");
-      console.log("2. Show this info again: window.debugWebhook = async () => { const { showWebhookDebugInfo } = await import('@/utils/shareUtils'); await showWebhookDebugInfo(); }; window.debugWebhook();");
-      console.log("3. Clear history: window.clearWebhookData = async () => { const { clearWebhookData } = await import('@/utils/webhookUtils'); clearWebhookData(); console.log('Webhook history cleared'); }; window.clearWebhookData();");
+      console.log("1. Test webhook: window.testWebhook = async () => { await testWebhookIntegration(); }; window.testWebhook();");
+      console.log("2. Show this info again: window.debugWebhook = async () => { await showWebhookDebugInfo(); }; window.debugWebhook();");
+      console.log("3. Clear history: window.clearWebhookData = () => { clearWebhookData(); console.log('Webhook history cleared'); }; window.clearWebhookData();");
       
     } catch (error) {
       console.error("Error displaying webhook debug info:", error);
     }
   } catch (error) {
-    console.error("Error importing webhookUtils:", error);
+    console.error("Error in webhook debug:", error);
   }
 };
+
+// Add the test functions to the window object for easy access from the console
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  window.testWebhookIntegration = testWebhookIntegration;
+  // @ts-ignore
+  window.showWebhookDebugInfo = showWebhookDebugInfo;
+}
