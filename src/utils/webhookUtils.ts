@@ -47,13 +47,22 @@ export const testWebhook = async (): Promise<{ success: boolean, message: string
       message: "This is a test message from Carfiable"
     };
     
-    // Send the test payload to the webhook
-    const response = await fetch(webhookEndpoint, {
-      method: 'POST',
+    // Convert the test payload to URL parameters for GET request
+    const params = new URLSearchParams();
+    Object.entries(testPayload).forEach(([key, value]) => {
+      params.append(key, value.toString());
+    });
+    
+    // Log the full URL with params for debugging
+    const fullUrl = `${webhookEndpoint}?${params.toString()}`;
+    console.log("Testing webhook GET URL:", fullUrl);
+    
+    // Send the test payload to the webhook using GET
+    const response = await fetch(fullUrl, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(testPayload)
+        'Accept': 'application/json'
+      }
     });
     
     if (!response.ok) {
@@ -130,16 +139,47 @@ export const sendQuotationToWebhook = async (
       }
     };
     
-    console.log("Sending quotation data to webhook:", JSON.stringify(quotationData));
-    console.log("Webhook URL:", webhookEndpoint);
+    // For GET requests, we need to flatten the nested object structure
+    // and convert to URL parameters
+    const flattenedData: Record<string, string> = {};
     
-    // Send the data to the webhook
-    const response = await fetch(webhookEndpoint, {
-      method: 'POST',
+    // Flatten car data
+    Object.entries(quotationData.car).forEach(([key, value]) => {
+      flattenedData[`car_${key}`] = value !== null ? value.toString() : '';
+    });
+    
+    // Flatten user data
+    Object.entries(quotationData.user).forEach(([key, value]) => {
+      flattenedData[`user_${key}`] = value.toString();
+    });
+    
+    // Flatten calculation data
+    Object.entries(quotationData.calculation).forEach(([key, value]) => {
+      flattenedData[`calculation_${key}`] = value.toString();
+    });
+    
+    // Add top-level fields
+    flattenedData.id = quotationData.id;
+    flattenedData.timestamp = quotationData.timestamp;
+    
+    // Convert to URL parameters
+    const params = new URLSearchParams();
+    Object.entries(flattenedData).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+    
+    // Build the full URL
+    const fullUrl = `${webhookEndpoint}?${params.toString()}`;
+    
+    console.log("Sending quotation data to webhook via GET:", flattenedData);
+    console.log("Webhook URL:", fullUrl);
+    
+    // Send the data to the webhook using GET
+    const response = await fetch(fullUrl, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(quotationData)
+        'Accept': 'application/json'
+      }
     });
     
     // Check if the request was successful
@@ -183,4 +223,3 @@ export const getWebhookConfig = async (): Promise<{ configured: boolean, url: st
     url: webhookUrl
   };
 };
-
