@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
     }
     
     if (!verificationCode) {
+      console.error('Missing verification code in request')
       throw new Error('Verification code is required')
     }
     

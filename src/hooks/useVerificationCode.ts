@@ -47,31 +47,32 @@ export const useVerificationCode = ({ userData, countryCode }: UseVerificationCo
     setIsSendingSMS(true);
     setError("");
     
-    // For test number, use fixed test code
-    if (isTestPhone) {
-      setExpectedCode("000000");
-    } else {
-      // Generate a random code for real numbers
-      const code = generateVerificationCode();
+    try {
+      // Generate a verification code first
+      const code = isTestPhone ? "000000" : generateVerificationCode();
+      console.log("Generated verification code:", code);
       setExpectedCode(code);
+      
+      // Then send it via SMS
+      await sendVerificationCode(
+        userData,
+        countryCode,
+        code,
+        () => {
+          // Start countdown for resend button
+          setCountdown(60);
+          setCanResend(false);
+        },
+        () => {
+          // Error handling is done in the service
+        }
+      );
+    } catch (err) {
+      console.error("Error in sendCode:", err);
+    } finally {
+      setIsLoading(false);
+      setIsSendingSMS(false);
     }
-    
-    await sendVerificationCode(
-      userData,
-      countryCode,
-      expectedCode,
-      () => {
-        // Start countdown for resend button
-        setCountdown(60);
-        setCanResend(false);
-      },
-      () => {
-        // Error handling is done in the service
-      }
-    );
-    
-    setIsLoading(false);
-    setIsSendingSMS(false);
   };
 
   // Handle countdown for resend button
