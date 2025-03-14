@@ -26,6 +26,67 @@ export const getWebhookEndpoint = async (): Promise<string | null> => {
 };
 
 /**
+ * Test the configured webhook endpoint
+ */
+export const testWebhook = async (): Promise<{ success: boolean, message: string, webhookUrl?: string }> => {
+  try {
+    const webhookEndpoint = await getWebhookEndpoint();
+    
+    if (!webhookEndpoint) {
+      return { 
+        success: false, 
+        message: "No webhook endpoint configured in Supabase app_config table"
+      };
+    }
+    
+    // Create a simple test payload
+    const testPayload = {
+      id: generateUniqueId(),
+      timestamp: new Date().toISOString(),
+      type: "webhook_test",
+      message: "This is a test message from Carfiable"
+    };
+    
+    // Send the test payload to the webhook
+    const response = await fetch(webhookEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(testPayload)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        message: `Webhook test failed: HTTP ${response.status} - ${errorText}`,
+        webhookUrl: webhookEndpoint
+      };
+    }
+    
+    // Try to parse the response as JSON
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch (e) {
+      responseData = await response.text();
+    }
+    
+    return {
+      success: true,
+      message: `Webhook test successful: ${JSON.stringify(responseData)}`,
+      webhookUrl: webhookEndpoint
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: `Error testing webhook: ${err instanceof Error ? err.message : String(err)}`
+    };
+  }
+};
+
+/**
  * Send quotation data to the configured webhook
  */
 export const sendQuotationToWebhook = async (
@@ -69,6 +130,9 @@ export const sendQuotationToWebhook = async (
       }
     };
     
+    console.log("Sending quotation data to webhook:", JSON.stringify(quotationData));
+    console.log("Webhook URL:", webhookEndpoint);
+    
     // Send the data to the webhook
     const response = await fetch(webhookEndpoint, {
       method: 'POST',
@@ -80,8 +144,18 @@ export const sendQuotationToWebhook = async (
     
     // Check if the request was successful
     if (!response.ok) {
-      console.error("Webhook request failed:", await response.text());
+      const errorText = await response.text();
+      console.error(`Webhook request failed: HTTP ${response.status} - ${errorText}`);
       return false;
+    }
+    
+    // Try to parse and log the response
+    try {
+      const responseData = await response.json();
+      console.log("Webhook response:", JSON.stringify(responseData));
+    } catch (e) {
+      const responseText = await response.text();
+      console.log("Webhook response (text):", responseText);
     }
     
     console.log("Quotation data sent to webhook successfully");
@@ -98,3 +172,15 @@ export const sendQuotationToWebhook = async (
 const generateUniqueId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 };
+
+/**
+ * Get the current webhook configuration
+ */
+export const getWebhookConfig = async (): Promise<{ configured: boolean, url: string | null }> => {
+  const webhookUrl = await getWebhookEndpoint();
+  return {
+    configured: !!webhookUrl,
+    url: webhookUrl
+  };
+};
+

@@ -44,3 +44,31 @@ export const getReferenceId = (): string | null => {
   }
   return null;
 };
+
+/**
+ * Test the webhook integration
+ * This function is useful for debugging webhook issues
+ */
+export const testWebhookIntegration = async (): Promise<void> => {
+  // Import dynamically to avoid circular dependencies
+  const { testWebhook } = await import('./webhookUtils');
+  
+  try {
+    const result = await testWebhook();
+    
+    if (result.success) {
+      console.log('✅ Webhook test successful!');
+      console.log(`Webhook URL: ${result.webhookUrl}`);
+      console.log(`Message: ${result.message}`);
+    } else {
+      console.error('❌ Webhook test failed!');
+      console.error(`Message: ${result.message}`);
+      if (result.webhookUrl) {
+        console.error(`Webhook URL: ${result.webhookUrl}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error running webhook test:', error);
+  }
+};
+
