@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -113,7 +112,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
               </div>
               <h3 className="text-xl font-semibold tracking-tight">Verificación</h3>
               <p className="text-sm text-muted-foreground">
-                Te hemos enviado un mensaje por SMS a <span className="font-medium">{userData.countryCode} {formatPhoneDisplay(userData.phone, userData.countryCode || '+52')}</span>. Introduce el código que aparece en pantalla.
+                Te hemos enviado un código de verificación por SMS a <span className="font-medium">{userData.countryCode} {formatPhoneDisplay(userData.phone, userData.countryCode || '+52')}</span>
               </p>
             </div>
 

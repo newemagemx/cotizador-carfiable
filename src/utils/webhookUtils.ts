@@ -189,13 +189,12 @@ export const sendQuotationToWebhook = async (
         name: userData.name,
         email: userData.email,
         phone: `${countryCode}${userData.phone}`,
-        verificationCode: verificationCode  // Including verification code in the webhook data
+        verificationCode: verificationCode
       },
       calculation: {
         monthlyPayment: calculatedPayment,
         term: selectedTerm
-      },
-      quotationCode: quotationId  // Adding the quotation code explicitly
+      }
     };
     
     // For GET requests, we need to flatten the nested object structure
@@ -220,7 +219,6 @@ export const sendQuotationToWebhook = async (
     // Add top-level fields
     flattenedData.id = quotationData.id;
     flattenedData.timestamp = quotationData.timestamp;
-    flattenedData.quotationCode = quotationData.quotationCode;  // Add quotation code to flattened data
     
     // Convert to URL parameters
     const params = new URLSearchParams();
