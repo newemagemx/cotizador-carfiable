@@ -5,12 +5,17 @@ import { User } from "@/types/seller";
 // Get user by phone number
 export const getUserByPhone = async (phone: string, countryCode: string): Promise<User | null> => {
   try {
-    // Build the query using the REST API approach since the table isn't included in the TypeScript codegen
+    // Define the types explicitly for the RPC call
+    type GetUserByPhoneParams = {
+      p_phone: string;
+      p_country_code: string;
+    };
+    
     const { data, error } = await supabase
-      .rpc('get_user_by_phone', { 
+      .rpc<User[]>('get_user_by_phone', {
         p_phone: phone,
         p_country_code: countryCode 
-      }) as { data: User[] | null, error: any };
+      } as GetUserByPhoneParams);
     
     if (error) {
       console.error("Error fetching user by phone:", error);
@@ -31,16 +36,25 @@ export const getUserByPhone = async (phone: string, countryCode: string): Promis
 // Create a new user
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User | null> => {
   try {
-    // Build the query using the REST API approach since the table isn't included in the TypeScript codegen
+    // Define the types explicitly for the RPC call
+    type CreateUserParams = {
+      p_name: string;
+      p_email: string;
+      p_phone: string;
+      p_country_code: string;
+      p_role?: string;
+      p_last_verified?: string | null;
+    };
+    
     const { data, error } = await supabase
-      .rpc('create_user', { 
+      .rpc<User>('create_user', {
         p_name: userData.name,
         p_email: userData.email,
         p_phone: userData.phone,
         p_country_code: userData.countryCode,
         p_role: userData.role || 'both',
         p_last_verified: userData.lastVerified
-      }) as { data: User | null, error: any };
+      } as CreateUserParams);
     
     if (error) {
       console.error("Error creating user:", error);
@@ -57,9 +71,19 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
 // Update an existing user
 export const updateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
-    // Build the query using the REST API approach since the table isn't included in the TypeScript codegen
+    // Define the types explicitly for the RPC call
+    type UpdateUserParams = {
+      p_id: string;
+      p_name?: string | null;
+      p_email?: string | null;
+      p_phone?: string | null;
+      p_country_code?: string | null;
+      p_role?: string | null;
+      p_last_verified?: string | null;
+    };
+    
     const { error } = await supabase
-      .rpc('update_user', { 
+      .rpc('update_user', {
         p_id: userId,
         p_name: userData.name,
         p_email: userData.email,
@@ -67,7 +91,7 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
         p_country_code: userData.countryCode,
         p_role: userData.role,
         p_last_verified: userData.lastVerified
-      }) as { data: any, error: any };
+      } as UpdateUserParams);
     
     if (error) {
       console.error("Error updating user:", error);
@@ -84,11 +108,15 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
 // Get user by ID
 export const getUserById = async (userId: string): Promise<User | null> => {
   try {
-    // Build the query using the REST API approach since the table isn't included in the TypeScript codegen
+    // Define the types explicitly for the RPC call
+    type GetUserByIdParams = {
+      p_id: string;
+    };
+    
     const { data, error } = await supabase
-      .rpc('get_user_by_id', { 
+      .rpc<User>('get_user_by_id', {
         p_id: userId
-      }) as { data: User | null, error: any };
+      } as GetUserByIdParams);
     
     if (error) {
       console.error("Error fetching user by ID:", error);
