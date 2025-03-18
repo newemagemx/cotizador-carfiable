@@ -10,6 +10,7 @@ import SellerIndex from "./pages/seller/Index";
 import VehicleValuation from "./pages/seller/VehicleValuation";
 import SellerRegistration from "./pages/seller/SellerRegistration";
 import VerifyPhone from "./pages/seller/VerifyPhone";
+import UserAuth from "./pages/auth/UserAuth";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          
+          {/* Auth Module Routes */}
+          <Route path="/auth" element={<UserAuth />} />
           
           {/* Seller Module Routes */}
           <Route path="/seller" element={<SellerIndex />} />

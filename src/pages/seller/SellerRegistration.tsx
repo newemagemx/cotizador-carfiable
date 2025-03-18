@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -22,9 +23,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, User, Mail, Phone } from "lucide-react";
-import { SellerData } from "@/types/seller";
+import { User as UserType } from "@/types/seller";
 import { checkIfPhoneVerified } from "@/components/verification/VerificationService";
 import CountryCodeSelector, { COUNTRY_CODES } from "@/components/verification/CountryCodeSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Form schema for user data
 const sellerSchema = z.object({
@@ -35,6 +38,7 @@ const sellerSchema = z.object({
 
 const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
   const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0].value);
 
@@ -57,22 +61,99 @@ const SellerRegistration: React.FC = () => {
       // Normalize the phone to keep only digits
       const normalizedPhone = data.phone.replace(/\D/g, '');
       
-      // Create the seller data object
-      const sellerData: SellerData = {
+      // Check if the user already exists in our database
+      const { data: existingUsers, error: queryError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .eq('country_code', countryCode)
+        .limit(1);
+      
+      if (queryError) {
+        console.error("Error checking existing user:", queryError);
+        toast({
+          title: "Error",
+          description: "No se pudo verificar si el usuario ya existe",
+          variant: "destructive",
+        });
+        setIsChecking(false);
+        return;
+      }
+      
+      let userId;
+      
+      // If user doesn't exist, create a new one
+      if (!existingUsers || existingUsers.length === 0) {
+        // Create a new user
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            name: data.name,
+            email: data.email,
+            phone: normalizedPhone,
+            country_code: countryCode,
+            role: 'seller',
+            last_verified: isVerified ? new Date().toISOString() : null
+          })
+          .select('id')
+          .single();
+          
+        if (insertError) {
+          console.error("Error creating user:", insertError);
+          toast({
+            title: "Error",
+            description: "No se pudo crear el usuario",
+            variant: "destructive",
+          });
+          setIsChecking(false);
+          return;
+        }
+        
+        userId = newUser.id;
+      } else {
+        // Use existing user
+        userId = existingUsers[0].id;
+        
+        // Update user data
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            name: data.name,
+            email: data.email,
+            role: 'seller',
+            last_verified: isVerified ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error("Error updating user:", updateError);
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar los datos del usuario",
+            variant: "destructive",
+          });
+          setIsChecking(false);
+          return;
+        }
+      }
+      
+      // Create the user data object
+      const userData: UserType = {
+        id: userId,
         name: data.name,
         email: data.email,
         phone: normalizedPhone,
         countryCode: countryCode,
+        role: 'seller',
         lastVerified: isVerified ? new Date().toISOString() : undefined,
       };
       
-      // Save the seller data to session storage
-      sessionStorage.setItem('sellerData', JSON.stringify(sellerData));
+      // Save the user data to session storage
+      sessionStorage.setItem('userData', JSON.stringify(userData));
       
-      // If the phone is already verified, skip verification step
       if (isVerified) {
-        // In a real app, you would save the data to the database here
-        // and navigate to the next step in the flow
+        // If the phone is already verified, skip verification step
         navigate('/seller/valuation/results'); // This page doesn't exist yet, we'll create it later
       } else {
         // Phone needs verification
@@ -80,7 +161,11 @@ const SellerRegistration: React.FC = () => {
       }
     } catch (error) {
       console.error("Error during registration:", error);
-      // Handle errors appropriately
+      toast({
+        title: "Error",
+        description: "Ocurrió un error durante el registro",
+        variant: "destructive",
+      });
     } finally {
       setIsChecking(false);
     }

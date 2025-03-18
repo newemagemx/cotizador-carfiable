@@ -1,4 +1,3 @@
-
 export interface VehicleData {
   brand: string;
   model: string;
@@ -10,12 +9,16 @@ export interface VehicleData {
   features: string[];
 }
 
-export interface SellerData {
+export interface User {
+  id?: string;
   name: string;
   email: string;
   phone: string;
   countryCode: string;
+  role?: 'buyer' | 'seller' | 'both';
   lastVerified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PriceEstimate {
@@ -28,7 +31,7 @@ export interface PriceEstimate {
 export interface VehicleListing {
   id: string;
   vehicleData: VehicleData;
-  sellerData: SellerData;
+  userId: string;
   priceEstimate: PriceEstimate;
   photos: string[];
   documents: string[];
@@ -51,6 +54,7 @@ export interface Appointment {
   status: 'scheduled' | 'completed' | 'canceled';
   type: 'capture' | 'buyer';
   buyerId?: string;
+  sellerId?: string;
   createdAt: string;
 }
 
@@ -60,4 +64,9 @@ export interface PromotionPackage {
   price: number;
   description: string;
   features: string[];
+}
+
+// For backward compatibility
+export interface SellerData extends User {
+  // Keep the same interface signature for existing code
 }
