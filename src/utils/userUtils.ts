@@ -10,7 +10,7 @@ export const getUserByPhone = async (phone: string, countryCode: string): Promis
       .rpc('get_user_by_phone', { 
         p_phone: phone,
         p_country_code: countryCode 
-      });
+      }) as { data: User[] | null, error: any };
     
     if (error) {
       console.error("Error fetching user by phone:", error);
@@ -40,7 +40,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
         p_country_code: userData.countryCode,
         p_role: userData.role || 'both',
         p_last_verified: userData.lastVerified
-      });
+      }) as { data: User | null, error: any };
     
     if (error) {
       console.error("Error creating user:", error);
@@ -67,7 +67,7 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
         p_country_code: userData.countryCode,
         p_role: userData.role,
         p_last_verified: userData.lastVerified
-      });
+      }) as { data: any, error: any };
     
     if (error) {
       console.error("Error updating user:", error);
@@ -88,7 +88,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     const { data, error } = await supabase
       .rpc('get_user_by_id', { 
         p_id: userId
-      });
+      }) as { data: User | null, error: any };
     
     if (error) {
       console.error("Error fetching user by ID:", error);

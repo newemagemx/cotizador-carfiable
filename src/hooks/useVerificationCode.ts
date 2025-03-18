@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { generateVerificationCode, sendVerificationCode } from '@/components/verification/VerificationService';
 import { UserData } from '@/types/forms';
+import { getFullPhoneNumber } from '@/utils/phoneUtils';
 
 // Test bypass credentials
 const TEST_PHONE = "+521234567890";
@@ -21,7 +22,8 @@ export const useVerificationCode = ({ userData, countryCode }: UseVerificationCo
   const [isSendingSMS, setIsSendingSMS] = useState(false);
 
   // Check if using test phone
-  const isTestPhone = getFullPhoneNumber(userData.phone, countryCode) === TEST_PHONE;
+  const fullPhoneNumber = getFullPhoneNumber(userData.phone, countryCode);
+  const isTestPhone = fullPhoneNumber === TEST_PHONE;
 
   // Handle verification code input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,15 +33,6 @@ export const useVerificationCode = ({ userData, countryCode }: UseVerificationCo
       setError("");
     }
   };
-
-  // Get the full phone number with country code
-  function getFullPhoneNumber(phone: string, countryCode: string): string {
-    // Remove any non-digit characters from the phone
-    const digitsOnly = phone.replace(/\D/g, '');
-    
-    // Combine the country code with the phone number
-    return `${countryCode}${digitsOnly}`;
-  }
 
   // Send verification code
   const sendCode = async () => {
