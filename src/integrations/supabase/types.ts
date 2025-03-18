@@ -146,6 +146,42 @@ export type Database = {
           },
         ]
       }
+      users: {
+        Row: {
+          country_code: string
+          created_at: string
+          email: string
+          id: string
+          last_verified: string | null
+          name: string
+          phone: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          country_code?: string
+          created_at?: string
+          email: string
+          id?: string
+          last_verified?: string | null
+          name: string
+          phone: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          email?: string
+          id?: string
+          last_verified?: string | null
+          name?: string
+          phone?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

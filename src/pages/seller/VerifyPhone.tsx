@@ -15,25 +15,25 @@ import VerificationCodeInput from "@/components/verification/VerificationCodeInp
 import VerificationActions from "@/components/verification/VerificationActions";
 import { useVerificationCode } from "@/hooks/useVerificationCode";
 import { toast } from "@/hooks/use-toast";
-import { SellerData, VehicleData } from "@/types/seller";
+import { User, VehicleData } from "@/types/seller";
 import { verifyCodeAndSaveData } from "@/components/verification/VerificationService";
 
 const VerifyPhone: React.FC = () => {
   const navigate = useNavigate();
-  const [sellerData, setSellerData] = useState<SellerData | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
   const [vehicleData, setVehicleData] = useState<VehicleData | null>(null);
   const [verificationError, setVerificationError] = useState('');
   const [verifying, setVerifying] = useState(false);
 
   // Load data from sessionStorage
   useEffect(() => {
-    const storedSellerData = sessionStorage.getItem('sellerData');
+    const storedUserData = sessionStorage.getItem('userData');
     const storedVehicleData = sessionStorage.getItem('vehicleData');
     
-    if (!storedSellerData || !storedVehicleData) {
+    if (!storedUserData) {
       toast({
         title: "Error",
-        description: "No se encontraron los datos necesarios. Por favor vuelve a empezar el proceso.",
+        description: "No se encontraron los datos de usuario. Por favor vuelve a empezar el proceso.",
         variant: "destructive",
       });
       navigate('/seller');
@@ -41,8 +41,11 @@ const VerifyPhone: React.FC = () => {
     }
 
     try {
-      setSellerData(JSON.parse(storedSellerData));
-      setVehicleData(JSON.parse(storedVehicleData));
+      setUserData(JSON.parse(storedUserData));
+      
+      if (storedVehicleData) {
+        setVehicleData(JSON.parse(storedVehicleData));
+      }
     } catch (error) {
       console.error("Error parsing stored data:", error);
       toast({
@@ -68,8 +71,8 @@ const VerifyPhone: React.FC = () => {
     handleInputChange,
     sendCode
   } = useVerificationCode({ 
-    userData: sellerData as any,
-    countryCode: sellerData?.countryCode || '+52'
+    userData: userData as any,
+    countryCode: userData?.countryCode || '+52'
   });
 
   // Handle verification code submission
@@ -79,10 +82,10 @@ const VerifyPhone: React.FC = () => {
       return;
     }
 
-    if (!sellerData || !vehicleData) {
+    if (!userData) {
       toast({
         title: "Error",
-        description: "No se encontraron los datos necesarios. Por favor vuelve a empezar el proceso.",
+        description: "No se encontraron los datos de usuario. Por favor vuelve a empezar el proceso.",
         variant: "destructive",
       });
       return;
@@ -93,40 +96,52 @@ const VerifyPhone: React.FC = () => {
 
     try {
       // Convert to the expected format for the verification service
-      const userData = {
-        name: sellerData.name,
-        email: sellerData.email,
-        phone: sellerData.phone,
-        countryCode: sellerData.countryCode
+      const userDataForVerification = {
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        countryCode: userData.countryCode
       };
 
-      const carData = {
+      // Create minimal car data if vehicle data isn't available
+      const carData = vehicleData ? {
         brand: vehicleData.brand,
         model: vehicleData.model,
         year: vehicleData.year,
         price: '0', // This will be updated after valuation
         downPaymentPercentage: 0, // Not applicable for seller flow
         carId: '', // Will be created later
+      } : {
+        brand: '',
+        model: '',
+        year: '',
+        price: '0',
+        downPaymentPercentage: 0,
+        carId: '',
       };
 
       const success = await verifyCodeAndSaveData(
         verificationCode,
         expectedCode,
         carData,
-        userData,
-        sellerData.countryCode,
+        userDataForVerification,
+        userData.countryCode,
         undefined,
         0,
         () => {
-          // Update the sellerData with verification timestamp
-          const updatedSellerData = {
-            ...sellerData,
+          // Update the userData with verification timestamp
+          const updatedUserData = {
+            ...userData,
             lastVerified: new Date().toISOString()
           };
-          sessionStorage.setItem('sellerData', JSON.stringify(updatedSellerData));
+          sessionStorage.setItem('userData', JSON.stringify(updatedUserData));
           
           // Navigate to the next page
-          navigate('/seller/valuation/results'); // We'll create this page later
+          if (vehicleData) {
+            navigate('/seller/valuation/results'); // Navigate to valuation results if we have vehicle data
+          } else {
+            navigate('/seller'); // Navigate to seller home if no vehicle data
+          }
         }
       );
 
@@ -141,7 +156,7 @@ const VerifyPhone: React.FC = () => {
     }
   };
 
-  if (!sellerData || !vehicleData) {
+  if (!userData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md shadow-lg">
@@ -192,7 +207,7 @@ const VerifyPhone: React.FC = () => {
                   Verificación de Teléfono
                 </CardTitle>
                 <CardDescription>
-                  Ingresa el código enviado a tu teléfono {sellerData.countryCode}{sellerData.phone}
+                  Ingresa el código enviado a tu teléfono {userData.countryCode}{userData.phone}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">

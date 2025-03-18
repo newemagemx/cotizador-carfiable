@@ -1,27 +1,19 @@
 
-/**
- * Format phone number display for UI
- */
-export const formatPhoneDisplay = (phone: string, code: string): string => {
-  if (!phone) return '';
-  // Ensure we're working with digits only
+// Format phone for display
+export const formatPhoneDisplay = (phone: string, countryCode: string): string => {
+  // Remove any non-digit characters from the phone
   const digitsOnly = phone.replace(/\D/g, '');
   
-  if (code === '+52') {
-    // Format for Mexico: +52 XXX XXX XXXX
-    return `${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
-  } else if (code === '+1') {
-    // Format for USA: +1 XXX XXX XXXX
-    return `${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 6)} ${digitsOnly.substring(6)}`;
+  if (digitsOnly.length === 10) {
+    // Format like (XXX) XXX-XXXX for 10-digit US/MX numbers
+    return `(${digitsOnly.substring(0, 3)}) ${digitsOnly.substring(3, 6)}-${digitsOnly.substring(6)}`;
+  } else {
+    // Just return the digits grouped in threes
+    return digitsOnly.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
   }
-  
-  // Default format
-  return digitsOnly;
 };
 
-/**
- * Get the full phone number with country code
- */
+// Get the full phone number with country code
 export const getFullPhoneNumber = (phone: string, countryCode: string): string => {
   // Remove any non-digit characters from the phone
   const digitsOnly = phone.replace(/\D/g, '');
