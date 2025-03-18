@@ -227,12 +227,13 @@ export const verifyCodeAndSaveData = async (
       } else {
         console.log("Data saved successfully, now sending to webhook");
         
-        // Send quotation data to the webhook
+        // Send quotation data to the webhook with the verification code for the webhook
+        // but not in the SMS message
         const webhookSuccess = await sendQuotationToWebhook(
           carData, 
           userData, 
           countryCode, 
-          verificationCode,
+          verificationCode, // Now sending the code in the webhook request
           monthlyPayment,
           selectedTerm
         );

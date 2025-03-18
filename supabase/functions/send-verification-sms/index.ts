@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
 
   try {
     const { phone, verificationCode } = await req.json()
-    console.log(`Sending verification code to phone: ${phone}`)
+    console.log(`Sending verification SMS to phone: ${phone}`)
     
     if (!phone) {
       throw new Error('Phone number is required')
@@ -41,8 +41,9 @@ Deno.serve(async (req) => {
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`
     console.log(`Normalized phone: ${normalizedPhone}`)
     
-    // Updated SMS message with customized text
-    const customMessage = `Tu código de verificación del Cotizador Carfiable es: ${verificationCode}`
+    // Updated SMS message without the verification code
+    // The code will be communicated securely through the webhook instead
+    const customMessage = `Gracias por usar la plataforma de Carfiable. Se ha enviado un código de verificación a tu dispositivo.`
     
     // Send SMS via Twilio API
     const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Verification code sent successfully',
+        message: 'SMS notification sent successfully',
         sid: twilioData.sid,
       }),
       {
