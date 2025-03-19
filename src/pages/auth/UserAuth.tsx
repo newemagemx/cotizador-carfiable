@@ -175,6 +175,12 @@ const UserAuth: React.FC = () => {
   // Toggle between login and registration forms
   const toggleMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
+    // Reset forms when toggling
+    if (mode === 'login') {
+      registerForm.reset();
+    } else {
+      loginForm.reset();
+    }
   };
 
   return (
@@ -263,6 +269,7 @@ const UserAuth: React.FC = () => {
                                   placeholder="Ej: Juan Pérez González"
                                   {...field}
                                   className="pl-10"
+                                  onChange={(e) => field.onChange(e.target.value)}
                                 />
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                               </div>
