@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -69,6 +69,12 @@ const UserAuth: React.FC = () => {
       password: "",
     },
   });
+
+  // Reset forms when toggling between modes
+  useEffect(() => {
+    loginForm.reset();
+    registerForm.reset();
+  }, [mode]);
 
   // Handle login form submission
   const onLoginSubmit = async (data: z.infer<typeof loginSchema>) => {
@@ -175,12 +181,6 @@ const UserAuth: React.FC = () => {
   // Toggle between login and registration forms
   const toggleMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
-    // Reset forms when toggling
-    if (mode === 'login') {
-      registerForm.reset();
-    } else {
-      loginForm.reset();
-    }
   };
 
   return (
@@ -267,9 +267,11 @@ const UserAuth: React.FC = () => {
                                 <Input
                                   type="text"
                                   placeholder="Ej: Juan Pérez González"
-                                  {...field}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
                                   className="pl-10"
-                                  onChange={(e) => field.onChange(e.target.value)}
                                 />
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                               </div>
