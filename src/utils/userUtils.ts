@@ -5,22 +5,32 @@ import { User } from "@/types/seller";
 // Get user by phone number
 export const getUserByPhone = async (phone: string, countryCode: string): Promise<User | null> => {
   try {
-    // Call the RPC function and cast the result to any to bypass the TypeScript errors
-    const { data, error } = await supabase.rpc(
-      'get_user_by_phone' as any, 
-      {
-        p_phone: phone,
-        p_country_code: countryCode 
-      }
-    );
+    // Use PostgreSQL functions directly and manually cast the response
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .eq('country_code', countryCode)
+      .limit(1);
     
     if (error) {
       console.error("Error fetching user by phone:", error);
       return null;
     }
     
-    if (data && Array.isArray(data) && data.length > 0) {
-      return data[0] as User;
+    if (data && data.length > 0) {
+      // Transform database column names to match our User interface
+      return {
+        id: data[0].id,
+        name: data[0].name,
+        email: data[0].email,
+        phone: data[0].phone,
+        countryCode: data[0].country_code,
+        role: data[0].role,
+        lastVerified: data[0].last_verified,
+        createdAt: data[0].created_at,
+        updatedAt: data[0].updated_at
+      } as User;
     }
     
     return null;
@@ -33,24 +43,36 @@ export const getUserByPhone = async (phone: string, countryCode: string): Promis
 // Create a new user
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User | null> => {
   try {
-    const { data, error } = await supabase.rpc(
-      'create_user' as any, 
-      {
-        p_name: userData.name,
-        p_email: userData.email,
-        p_phone: userData.phone,
-        p_country_code: userData.countryCode,
-        p_role: userData.role || 'both',
-        p_last_verified: userData.lastVerified
-      }
-    );
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        country_code: userData.countryCode,
+        role: userData.role || 'both',
+        last_verified: userData.lastVerified
+      })
+      .select('*')
+      .single();
     
     if (error) {
       console.error("Error creating user:", error);
       return null;
     }
     
-    return data as User;
+    // Transform database column names to match our User interface
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      countryCode: data.country_code,
+      role: data.role,
+      lastVerified: data.last_verified,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    } as User;
   } catch (err) {
     console.error("Exception in createUser:", err);
     return null;
@@ -60,18 +82,20 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
 // Update an existing user
 export const updateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
-    const { error } = await supabase.rpc(
-      'update_user' as any, 
-      {
-        p_id: userId,
-        p_name: userData.name,
-        p_email: userData.email,
-        p_phone: userData.phone,
-        p_country_code: userData.countryCode,
-        p_role: userData.role,
-        p_last_verified: userData.lastVerified
-      }
-    );
+    const updateData: Record<string, unknown> = {};
+    
+    // Map from User interface field names to database column names
+    if (userData.name !== undefined) updateData.name = userData.name;
+    if (userData.email !== undefined) updateData.email = userData.email;
+    if (userData.phone !== undefined) updateData.phone = userData.phone;
+    if (userData.countryCode !== undefined) updateData.country_code = userData.countryCode;
+    if (userData.role !== undefined) updateData.role = userData.role;
+    if (userData.lastVerified !== undefined) updateData.last_verified = userData.lastVerified;
+    
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
     
     if (error) {
       console.error("Error updating user:", error);
@@ -88,12 +112,11 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
 // Get user by ID
 export const getUserById = async (userId: string): Promise<User | null> => {
   try {
-    const { data, error } = await supabase.rpc(
-      'get_user_by_id' as any, 
-      {
-        p_id: userId
-      }
-    );
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
     
     if (error) {
       console.error("Error fetching user by ID:", error);
@@ -101,7 +124,18 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     }
     
     if (data) {
-      return data as User;
+      // Transform database column names to match our User interface
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        countryCode: data.country_code,
+        role: data.role,
+        lastVerified: data.last_verified,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      } as User;
     }
     
     return null;
