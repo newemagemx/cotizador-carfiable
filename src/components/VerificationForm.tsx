@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +8,11 @@ import { CarData, UserData } from '@/types/forms';
 import { formatPhoneDisplay } from '@/utils/phoneUtils';
 import { verifyCodeAndSaveData } from '@/components/verification/VerificationService';
 import { useVerificationCode } from '@/hooks/useVerificationCode';
-import VerificationCodeInput from '@/components/verification/VerificationCodeInput';
+import { 
+  InputOTP, 
+  InputOTPGroup, 
+  InputOTPSlot 
+} from "@/components/ui/input-otp";
 import VerificationActions from '@/components/verification/VerificationActions';
 
 interface VerificationFormProps {
@@ -65,6 +70,28 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     countryCode: userData.countryCode || '+52' // Use country code from userData or default to +52
   });
 
+  // New state for OTP input
+  const [otpValue, setOtpValue] = useState("");
+
+  // Update verification code when OTP changes
+  useEffect(() => {
+    if (otpValue !== verificationCode) {
+      // Use handleInputChange with a mock event
+      const mockEvent = {
+        target: { value: otpValue }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      handleInputChange(mockEvent);
+    }
+  }, [otpValue]);
+
+  // Update OTP when verification code changes (for initial load)
+  useEffect(() => {
+    if (verificationCode !== otpValue) {
+      setOtpValue(verificationCode);
+    }
+  }, [verificationCode]);
+
   const handleVerify = async () => {
     setIsLoading(true);
     setError("");
@@ -117,12 +144,30 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
             </div>
 
             <div className="space-y-4">
-              {/* Verification Code Input */}
-              <VerificationCodeInput
-                value={verificationCode}
-                onChange={handleInputChange}
-                error={error}
-              />
+              {/* OTP Input Component */}
+              <div className="space-y-2">
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <InputOTP 
+                    maxLength={6} 
+                    value={otpValue} 
+                    onChange={setOtpValue}
+                    className="gap-2 flex justify-center"
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  
+                  {error && (
+                    <p className="text-red-500 text-sm mt-1">{error}</p>
+                  )}
+                </div>
+              </div>
               
               {/* Action Buttons */}
               <VerificationActions
