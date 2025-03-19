@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -9,37 +8,13 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Phone, Lock, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import CountryCodeSelector, { COUNTRY_CODES } from "@/components/verification/CountryCodeSelector";
 import { User as UserType } from "@/types/seller";
-
-// Form schema for login and registration
-const loginSchema = z.object({
-  email: z.string().email("Correo electrónico inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-});
-
-const registerSchema = z.object({
-  name: z.string().min(3, "Nombre completo es requerido"),
-  email: z.string().email("Correo electrónico inválido"),
-  phone: z.string().min(8, "Número telefónico inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-});
+import LoginForm, { LoginFormData } from './components/LoginForm';
+import RegisterForm, { RegisterFormData } from './components/RegisterForm';
 
 type FormMode = 'login' | 'register';
 
@@ -48,36 +23,9 @@ const UserAuth: React.FC = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<FormMode>('login');
-  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0].value);
-
-  // Set up the login form
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  // Set up the registration form
-  const registerForm = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      password: "",
-    },
-  });
-
-  // Reset forms when toggling between modes
-  useEffect(() => {
-    loginForm.reset();
-    registerForm.reset();
-  }, [mode]);
 
   // Handle login form submission
-  const onLoginSubmit = async (data: z.infer<typeof loginSchema>) => {
+  const onLoginSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
 
     try {
@@ -109,7 +57,7 @@ const UserAuth: React.FC = () => {
   };
 
   // Handle registration form submission
-  const onRegisterSubmit = async (data: z.infer<typeof registerSchema>) => {
+  const onRegisterSubmit = async (data: RegisterFormData, countryCode: string) => {
     setIsLoading(true);
 
     try {
@@ -202,165 +150,9 @@ const UserAuth: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-6">
                 {mode === 'login' ? (
-                  <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
-                      <FormField
-                        control={loginForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Correo Electrónico</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="email"
-                                  placeholder="ejemplo@correo.com"
-                                  {...field}
-                                  className="pl-10"
-                                />
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contraseña</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="password"
-                                  placeholder="••••••••"
-                                  {...field}
-                                  className="pl-10"
-                                />
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-                      </Button>
-                    </form>
-                  </Form>
+                  <LoginForm onSubmit={onLoginSubmit} isLoading={isLoading} />
                 ) : (
-                  <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
-                      <FormField
-                        control={registerForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nombre Completo</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="text"
-                                  placeholder="Ej: Juan Pérez González"
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                  className="pl-10"
-                                />
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Correo Electrónico</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="email"
-                                  placeholder="ejemplo@correo.com"
-                                  {...field}
-                                  className="pl-10"
-                                />
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="space-y-2">
-                        <FormLabel htmlFor="phone">Número Telefónico</FormLabel>
-                        <div className="flex">
-                          <CountryCodeSelector
-                            value={countryCode}
-                            onChange={setCountryCode}
-                            compact={true}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem className="flex-1">
-                                <FormControl>
-                                  <div className="relative w-full">
-                                    <Input
-                                      type="tel"
-                                      placeholder="6562762136"
-                                      {...field}
-                                      className="rounded-l-none pl-10"
-                                    />
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contraseña</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="password"
-                                  placeholder="••••••••"
-                                  {...field}
-                                  className="pl-10"
-                                />
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
-                      </Button>
-                    </form>
-                  </Form>
+                  <RegisterForm onSubmit={onRegisterSubmit} isLoading={isLoading} />
                 )}
               </CardContent>
               <CardFooter className="flex flex-col border-t px-6 py-4 space-y-4">
