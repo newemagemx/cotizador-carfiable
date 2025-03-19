@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -258,6 +259,7 @@ const UserAuth: React.FC = () => {
                             <FormControl>
                               <div className="relative">
                                 <Input
+                                  type="text"
                                   placeholder="Ej: Juan Pérez González"
                                   {...field}
                                   className="pl-10"
