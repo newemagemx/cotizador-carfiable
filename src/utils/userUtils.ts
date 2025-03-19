@@ -5,17 +5,14 @@ import { User } from "@/types/seller";
 // Get user by phone number
 export const getUserByPhone = async (phone: string, countryCode: string): Promise<User | null> => {
   try {
-    // Define the types explicitly for the RPC call
-    type GetUserByPhoneParams = {
-      p_phone: string;
-      p_country_code: string;
-    };
-    
-    const { data, error } = await supabase
-      .rpc('get_user_by_phone', {
+    // Call the RPC function and cast the result to any to bypass the TypeScript errors
+    const { data, error } = await supabase.rpc(
+      'get_user_by_phone' as any, 
+      {
         p_phone: phone,
         p_country_code: countryCode 
-      });
+      }
+    );
     
     if (error) {
       console.error("Error fetching user by phone:", error);
@@ -36,15 +33,17 @@ export const getUserByPhone = async (phone: string, countryCode: string): Promis
 // Create a new user
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User | null> => {
   try {
-    const { data, error } = await supabase
-      .rpc('create_user', {
+    const { data, error } = await supabase.rpc(
+      'create_user' as any, 
+      {
         p_name: userData.name,
         p_email: userData.email,
         p_phone: userData.phone,
         p_country_code: userData.countryCode,
         p_role: userData.role || 'both',
         p_last_verified: userData.lastVerified
-      });
+      }
+    );
     
     if (error) {
       console.error("Error creating user:", error);
@@ -61,8 +60,9 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
 // Update an existing user
 export const updateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .rpc('update_user', {
+    const { error } = await supabase.rpc(
+      'update_user' as any, 
+      {
         p_id: userId,
         p_name: userData.name,
         p_email: userData.email,
@@ -70,7 +70,8 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
         p_country_code: userData.countryCode,
         p_role: userData.role,
         p_last_verified: userData.lastVerified
-      });
+      }
+    );
     
     if (error) {
       console.error("Error updating user:", error);
@@ -87,10 +88,12 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
 // Get user by ID
 export const getUserById = async (userId: string): Promise<User | null> => {
   try {
-    const { data, error } = await supabase
-      .rpc('get_user_by_id', {
+    const { data, error } = await supabase.rpc(
+      'get_user_by_id' as any, 
+      {
         p_id: userId
-      });
+      }
+    );
     
     if (error) {
       console.error("Error fetching user by ID:", error);
