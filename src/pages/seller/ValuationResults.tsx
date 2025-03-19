@@ -1,508 +1,451 @@
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ArrowLeft, 
-  Clock, 
-  DollarSign, 
-  Share2, 
-  CheckCircle2, 
-  Zap,
-  BarChart4
-} from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { VehicleData, User, PriceEstimate } from "@/types/seller";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { CarData, UserData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Check, Sparkles, ArrowRight, Share2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { ValuationResponse } from '@/types/seller';
+import { formatCurrency } from '@/utils/shareUtils';
 
-const ValuationResults: React.FC = () => {
+const WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid'; // Replace with actual webhook for production
+
+const ValuationResults = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const [userData, setUserData] = useState<User | null>(null);
-  const [vehicleData, setVehicleData] = useState<VehicleData | null>(null);
-  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate>({
-    quick: 0,
-    balanced: 0,
-    premium: 0,
-    currency: 'MXN'
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+  const [selectedOption, setSelectedOption] = useState<string>('balanced');
+  const [isLoading, setIsLoading] = useState(false);
+  const [savedListingId, setSavedListingId] = useState<string | null>(null);
 
-  // Load user and vehicle data from sessionStorage
+  // Get the data passed from the verification step
+  const userData = location.state?.userData as UserData;
+  const carData = location.state?.carData as CarData;
+  const userId = location.state?.userId as string;
+
+  // Mock valuation data (to be replaced with actual API call)
+  const [valuationData, setValuationData] = useState<ValuationResponse | null>(null);
+
   useEffect(() => {
-    const storedUserData = sessionStorage.getItem('userData');
-    const storedVehicleData = sessionStorage.getItem('vehicleData');
-    
-    if (!storedUserData || !storedVehicleData) {
+    if (!userData || !carData) {
       toast({
-        title: "Error",
-        description: "No se encontraron los datos necesarios. Por favor vuelve a empezar el proceso.",
+        title: "Información faltante",
+        description: "No se encontraron datos del vehículo o del usuario. Por favor intenta de nuevo.",
         variant: "destructive",
       });
-      navigate('/seller');
+      navigate('/');
       return;
     }
 
-    try {
-      const parsedUserData = JSON.parse(storedUserData);
-      const parsedVehicleData = JSON.parse(storedVehicleData);
-      
-      setUserData(parsedUserData);
-      setVehicleData(parsedVehicleData);
-      
-      // Generate valuation
-      generateValuation(parsedVehicleData);
-    } catch (error) {
-      console.error("Error parsing stored data:", error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error al cargar los datos. Por favor vuelve a empezar el proceso.",
-        variant: "destructive",
-      });
-      navigate('/seller');
-    }
-  }, [navigate]);
+    const calculateValuation = async () => {
+      // This would be replaced with an actual API call to a valuation service
+      try {
+        // For now, simulate an API call with setTimeout
+        setIsLoading(true);
+        
+        // You can replace this with an actual API call when ready
+        const webhookData = {
+          car: {
+            brand: carData.brand,
+            model: carData.model,
+            year: carData.year,
+            version: carData.version || '',
+            mileage: parseInt(carData.mileage.toString()),
+            condition: carData.condition || 'good',
+          },
+          user: {
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+          }
+        };
 
-  // Generate price estimation based on vehicle data
-  const generateValuation = async (vehicle: VehicleData) => {
+        // This is currently just a mock response - in production connect to your valuation API
+        const mockValuationResponse = await new Promise<ValuationResponse>((resolve) => {
+          setTimeout(() => {
+            // Mock price calculation based on car data
+            const basePrice = 350000; // Base price for example
+            const mileageImpact = parseInt(carData.mileage.toString()) * -0.05; // Reduce price by mileage
+            const yearImpact = (2023 - parseInt(carData.year)) * -10000; // Older cars worth less
+            
+            const balancedPrice = Math.round(basePrice + mileageImpact + yearImpact);
+            const quickPrice = Math.round(balancedPrice * 0.85); // 15% less for quick sale
+            const premiumPrice = Math.round(balancedPrice * 1.15); // 15% more for premium
+            
+            resolve({
+              quickSellPrice: quickPrice,
+              balancedPrice: balancedPrice,
+              premiumPrice: premiumPrice,
+              currency: 'MXN'
+            });
+          }, 1500);
+        });
+
+        // Store the valuation in the database
+        if (userId) {
+          try {
+            const { data, error } = await supabase
+              .from('vehicle_listings')
+              .insert({
+                user_id: userId,
+                brand: carData.brand,
+                model: carData.model,
+                year: carData.year,
+                version: carData.version || '',
+                mileage: parseInt(carData.mileage.toString()),
+                condition: carData.condition || 'good',
+                location: carData.location || '',
+                features: carData.features || [],
+                estimated_price_quick: mockValuationResponse.quickSellPrice,
+                estimated_price_balanced: mockValuationResponse.balancedPrice,
+                estimated_price_premium: mockValuationResponse.premiumPrice,
+                currency: 'MXN',
+                status: 'draft'
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('Error saving valuation:', error);
+              toast({
+                title: "Error al guardar",
+                description: "No se pudo guardar la valuación. " + error.message,
+                variant: "destructive",
+              });
+            } else if (data) {
+              setSavedListingId(data.id);
+              mockValuationResponse.id = data.id;
+            }
+          } catch (err) {
+            console.error('Exception saving valuation:', err);
+          }
+        }
+
+        // Send to webhook for testing/integration
+        try {
+          const webhookResponse = await fetch(WEBHOOK_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...webhookData,
+              valuation: mockValuationResponse
+            }),
+          });
+          
+          if (!webhookResponse.ok) {
+            console.warn('Webhook notification failed:', await webhookResponse.text());
+          }
+        } catch (err) {
+          console.warn('Webhook error:', err);
+        }
+
+        setValuationData(mockValuationResponse);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error during valuation:', error);
+        toast({
+          title: "Error de valuación",
+          description: "No se pudo completar la valuación del vehículo. Por favor intenta de nuevo.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+    };
+
+    calculateValuation();
+  }, [carData, userData, userId, navigate, toast]);
+
+  const handleOptionSelect = (value: string) => {
+    setSelectedOption(value);
+  };
+
+  const handleProceed = async () => {
+    if (!valuationData) return;
+    
     setIsLoading(true);
     
-    try {
-      // Calculate base price (for demo purposes)
-      // In a real app, this would come from an API or database
-      const basePrice = calculateBasePrice(vehicle);
-      
-      // Create the price estimate
-      const estimate: PriceEstimate = {
-        quick: Math.round(basePrice * 0.85), // 15% less for quick sale
-        balanced: basePrice,
-        premium: Math.round(basePrice * 1.15), // 15% more for premium
-        currency: 'MXN'
-      };
-      
-      setPriceEstimate(estimate);
-      
-      // Send to webhook for demo purposes
-      sendValuationToWebhook(vehicle, estimate);
-      
-      // Save to database if needed
-      if (userData?.id) {
-        saveValuationToDatabase(vehicle, estimate, userData.id);
+    // If we have a listing ID, update it with the selected price type
+    if (savedListingId) {
+      try {
+        const { error } = await supabase
+          .from('vehicle_listings')
+          .update({ 
+            selected_price_type: selectedOption,
+            status: 'published'
+          })
+          .eq('id', savedListingId);
+          
+        if (error) {
+          console.error('Error updating listing:', error);
+          toast({
+            title: "Error al actualizar",
+            description: "No se pudo actualizar la selección. " + error.message,
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error('Exception updating listing:', err);
       }
-    } catch (error) {
-      console.error("Error generating valuation:", error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error al generar la valuación. Por favor intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Calculate base price based on vehicle attributes (demo algorithm)
-  const calculateBasePrice = (vehicle: VehicleData): number => {
-    // Base price calculation logic - this is just a demo
-    // In reality, this would be much more complex or come from an external API
-    
-    // Start with a base value depending on brand tier
-    let baseValue = 150000; // Default base value
-    
-    // Apply brand multiplier
-    const brandMultipliers: Record<string, number> = {
-      'BMW': 2.5,
-      'Mercedes-Benz': 2.4,
-      'Audi': 2.3,
-      'Volkswagen': 1.5,
-      'Honda': 1.3,
-      'Toyota': 1.4,
-      'Nissan': 1.2,
-      'Ford': 1.1,
-      'Chevrolet': 1.0,
-      'Hyundai': 1.0,
-      'Kia': 0.9
-    };
-    
-    const brandMultiplier = brandMultipliers[vehicle.brand] || 1.0;
-    baseValue *= brandMultiplier;
-    
-    // Apply year factor
-    const currentYear = new Date().getFullYear();
-    const vehicleYear = parseInt(vehicle.year);
-    const yearFactor = Math.max(0.5, 1 - ((currentYear - vehicleYear) * 0.08));
-    baseValue *= yearFactor;
-    
-    // Apply mileage factor
-    const mileageFactor = Math.max(0.5, 1 - (vehicle.mileage / 150000));
-    baseValue *= mileageFactor;
-    
-    // Apply condition factor
-    const conditionFactors: Record<string, number> = {
-      'excellent': 1.2,
-      'good': 1.0,
-      'fair': 0.8
-    };
-    
-    const conditionFactor = conditionFactors[vehicle.condition] || 1.0;
-    baseValue *= conditionFactor;
-    
-    // Apply features bonus (each feature adds a small percentage)
-    if (vehicle.features && vehicle.features.length > 0) {
-      const featureBonus = 1 + (vehicle.features.length * 0.02);
-      baseValue *= featureBonus;
     }
     
-    // Round to nearest thousand
-    return Math.round(baseValue / 1000) * 1000;
-  };
-  
-  // Send valuation data to webhook
-  const sendValuationToWebhook = async (vehicle: VehicleData, priceEstimate: PriceEstimate) => {
-    try {
-      // Just log for demo purposes
-      console.log("Sending valuation data to webhook:", {
-        vehicle,
-        priceEstimate,
-        timestamp: new Date().toISOString()
-      });
-      
-      // In a real app, you would send this to a real webhook endpoint
-      // For now, we'll simulate a successful response
-      console.log("Webhook response received:", {
-        success: true,
-        message: "Valuation data received successfully"
-      });
-    } catch (error) {
-      console.error("Error sending data to webhook:", error);
-    }
-  };
-  
-  // Save valuation to database
-  const saveValuationToDatabase = async (vehicle: VehicleData, priceEstimate: PriceEstimate, userId: string) => {
-    try {
-      // We'll save this as a vehicle listing in draft status
-      const { data, error } = await supabase
-        .from('vehicle_listings')
-        .insert({
-          user_id: userId,
-          brand: vehicle.brand,
-          model: vehicle.model,
-          year: vehicle.year,
-          version: vehicle.version,
-          mileage: vehicle.mileage,
-          condition: vehicle.condition,
-          location: vehicle.location || '',
-          features: vehicle.features || [],
-          estimated_price_quick: priceEstimate.quick,
-          estimated_price_balanced: priceEstimate.balanced, 
-          estimated_price_premium: priceEstimate.premium,
-          currency: priceEstimate.currency,
-          status: 'draft'
-        })
-        .select('id')
-        .single();
-      
-      if (error) {
-        console.error("Error saving valuation to database:", error);
-        // Don't show error to user, as this is a background operation
-        return null;
-      }
-      
-      // If successful, return the ID
-      return data.id;
-    } catch (error) {
-      console.error("Exception saving valuation to database:", error);
-      return null;
-    }
-  };
-  
-  // Handle continue button click
-  const handleContinue = () => {
-    navigate('/seller/photos'); // Navigate to photo upload page
-  };
-  
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-MX', { 
-      style: 'currency', 
-      currency: 'MXN',
-      maximumFractionDigits: 0
-    }).format(amount);
+    // Show success message
+    toast({
+      title: "¡Excelente elección!",
+      description: "Hemos registrado tu preferencia de precio. Te contactaremos pronto.",
+    });
+    
+    // Navigate to next step or dashboard
+    setIsLoading(false);
+    navigate('/seller/dashboard', { 
+      state: { 
+        listingId: savedListingId,
+        priceType: selectedOption,
+        userData,
+        carData,
+        valuationData
+      } 
+    });
   };
 
-  if (isLoading || !vehicleData) {
+  const getSelectedPrice = () => {
+    if (!valuationData) return 0;
+    
+    switch (selectedOption) {
+      case 'quick':
+        return valuationData.quickSellPrice;
+      case 'premium':
+        return valuationData.premiumPrice;
+      case 'balanced':
+      default:
+        return valuationData.balancedPrice;
+    }
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
+
+  if (isLoading && !valuationData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-lg p-8 text-center">
-          <div className="space-y-4">
-            <BarChart4 className="mx-auto h-12 w-12 text-primary animate-pulse" />
-            <CardTitle>Calculando Valuación</CardTitle>
-            <CardDescription>
-              Estamos analizando los datos de tu vehículo para brindarte la mejor estimación de precio.
-            </CardDescription>
-          </div>
-        </Card>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Calculando el valor de tu {carData?.brand} {carData?.model}</h2>
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">
+            Estamos analizando miles de datos para brindarte la mejor valoración...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="ghost"
-            className="mb-6"
-            onClick={() => navigate('/seller')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver al inicio
-          </Button>
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className="space-y-6"
+      >
+        <motion.div variants={itemVariants}>
+          <h1 className="text-3xl font-bold text-center mb-2">Resultado de la Valuación</h1>
+          <p className="text-center text-muted-foreground mb-8">
+            Hemos calculado el valor de tu {carData?.brand} {carData?.model} {carData?.year}.
+            Selecciona la opción que mejor se adapte a tus necesidades.
+          </p>
+        </motion.div>
 
-          <Card className="mb-8">
-            <CardHeader className="bg-blue-50 border-b">
-              <CardTitle>Resultados de la Valuación</CardTitle>
+        <motion.div variants={itemVariants}>
+          <Card className="mb-6 shadow-md border-blue-100">
+            <CardHeader className="pb-2">
+              <CardTitle>Tu Vehículo</CardTitle>
               <CardDescription>
-                {vehicleData.brand} {vehicleData.model} {vehicleData.year}
+                <span className="font-semibold">{carData?.brand} {carData?.model} {carData?.year}</span>
+                {carData?.version && <span> - {carData.version}</span>}
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
-                  <div className="flex items-start">
-                    <CheckCircle2 className="h-5 w-5 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Valuación completada con éxito</p>
-                      <p className="text-sm">
-                        Basado en las condiciones del mercado actual y los detalles proporcionados de tu vehículo.
-                      </p>
-                    </div>
-                  </div>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Kilometraje:</span> {carData?.mileage} km
                 </div>
-
-                <Tabs defaultValue="balanced" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="quick">Precio Rápido</TabsTrigger>
-                    <TabsTrigger value="balanced">Precio Equilibrado</TabsTrigger>
-                    <TabsTrigger value="premium">Precio Premium</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="quick" className="pt-4">
-                    <Card>
-                      <CardHeader className="bg-orange-50 pb-2">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <CardTitle className="flex items-center text-orange-700">
-                              <Zap className="mr-2 h-5 w-5" />
-                              Precio Rápido
-                            </CardTitle>
-                            <CardDescription className="text-orange-600">
-                              Venta inmediata, menor ganancia
-                            </CardDescription>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-orange-700">
-                              {formatCurrency(priceEstimate.quick)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Venta en menos de 2 semanas</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Trámites simplificados</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Pago inmediato</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t bg-gray-50 flex justify-between">
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          Tiempo estimado: 1-2 semanas
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleContinue}
-                        >
-                          Seleccionar
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="balanced" className="pt-4">
-                    <Card>
-                      <CardHeader className="bg-emerald-50 pb-2">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <CardTitle className="flex items-center text-emerald-700">
-                              <BarChart4 className="mr-2 h-5 w-5" />
-                              Precio Equilibrado
-                            </CardTitle>
-                            <CardDescription className="text-emerald-600">
-                              Balance entre tiempo y ganancia
-                            </CardDescription>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-emerald-700">
-                              {formatCurrency(priceEstimate.balanced)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Venta en 3-4 semanas</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Mayor exposición en el mercado</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Buen balance entre precio y tiempo</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t bg-gray-50 flex justify-between">
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          Tiempo estimado: 3-4 semanas
-                        </div>
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={handleContinue}
-                        >
-                          Seleccionar
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="premium" className="pt-4">
-                    <Card>
-                      <CardHeader className="bg-indigo-50 pb-2">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <CardTitle className="flex items-center text-indigo-700">
-                              <DollarSign className="mr-2 h-5 w-5" />
-                              Precio Premium
-                            </CardTitle>
-                            <CardDescription className="text-indigo-600">
-                              Máxima ganancia, mayor tiempo
-                            </CardDescription>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-indigo-700">
-                              {formatCurrency(priceEstimate.premium)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Maximiza tu ganancia</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Marketing especializado</p>
-                          </div>
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mt-0.5 mr-2 text-green-500" />
-                            <p>Compradores selectos</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t bg-gray-50 flex justify-between">
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          Tiempo estimado: 5-8 semanas
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleContinue}
-                        >
-                          Seleccionar
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-                
-                <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                  <h4 className="font-medium text-blue-800 mb-2">Información de la Valuación</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600 mb-1">Marca:</p>
-                      <p className="font-medium">{vehicleData.brand}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 mb-1">Modelo:</p>
-                      <p className="font-medium">{vehicleData.model}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 mb-1">Año:</p>
-                      <p className="font-medium">{vehicleData.year}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 mb-1">Versión:</p>
-                      <p className="font-medium">{vehicleData.version || 'No especificado'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 mb-1">Kilometraje:</p>
-                      <p className="font-medium">{vehicleData.mileage.toLocaleString()} km</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 mb-1">Condición:</p>
-                      <p className="font-medium capitalize">{vehicleData.condition}</p>
-                    </div>
-                  </div>
+                <div>
+                  <span className="text-muted-foreground">Condición:</span> {carData?.condition === 'excellent' ? 'Excelente' : carData?.condition === 'good' ? 'Buena' : 'Regular'}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="border-t bg-gray-50 flex flex-wrap gap-2 justify-between">
-              <Button variant="ghost" onClick={() => navigate('/seller')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Volver
-              </Button>
-              
-              <div className="flex gap-2">
-                <Button variant="outline">
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Compartir
-                </Button>
-                <Button onClick={handleContinue}>
-                  Continuar
-                </Button>
-              </div>
-            </CardFooter>
           </Card>
-        </div>
-      </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <RadioGroup
+            value={selectedOption}
+            onValueChange={handleOptionSelect}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+          >
+            <div className={`relative rounded-lg border-2 ${selectedOption === 'quick' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} p-4 transition-all`}>
+              <RadioGroupItem
+                value="quick"
+                id="quick"
+                className="absolute right-4 top-4 border-orange-500"
+              />
+              <div className="mb-2">
+                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
+                  <Clock className="h-3 w-3 mr-1" /> Venta Rápida
+                </Badge>
+              </div>
+              <Label
+                htmlFor="quick"
+                className="text-xl font-bold block mb-1 cursor-pointer"
+              >
+                {valuationData && formatCurrency(valuationData.quickSellPrice, valuationData.currency)}
+              </Label>
+              <p className="text-sm text-muted-foreground mb-4">
+                Precio más bajo pero con venta garantizada en 7-14 días.
+              </p>
+              <ul className="text-xs space-y-1 text-gray-600">
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Proceso acelerado
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Menos trámites
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Pago inmediato
+                </li>
+              </ul>
+            </div>
+
+            <div className={`relative rounded-lg border-2 ${selectedOption === 'balanced' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} p-4 transition-all`}>
+              <RadioGroupItem
+                value="balanced"
+                id="balanced"
+                className="absolute right-4 top-4 border-blue-500"
+              />
+              <div className="mb-2">
+                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Check className="h-3 w-3 mr-1" /> Equilibrado
+                </Badge>
+              </div>
+              <Label
+                htmlFor="balanced"
+                className="text-xl font-bold block mb-1 cursor-pointer"
+              >
+                {valuationData && formatCurrency(valuationData.balancedPrice, valuationData.currency)}
+              </Label>
+              <p className="text-sm text-muted-foreground mb-4">
+                Mejor relación entre precio y tiempo de venta (15-30 días).
+              </p>
+              <ul className="text-xs space-y-1 text-gray-600">
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Mejor precio que la venta rápida
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Tiempo razonable
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Mayor exposición
+                </li>
+              </ul>
+            </div>
+
+            <div className={`relative rounded-lg border-2 ${selectedOption === 'premium' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'} p-4 transition-all`}>
+              <RadioGroupItem
+                value="premium"
+                id="premium"
+                className="absolute right-4 top-4 border-purple-500"
+              />
+              <div className="mb-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Sparkles className="h-3 w-3 mr-1" /> Premium
+                </Badge>
+              </div>
+              <Label
+                htmlFor="premium"
+                className="text-xl font-bold block mb-1 cursor-pointer"
+              >
+                {valuationData && formatCurrency(valuationData.premiumPrice, valuationData.currency)}
+              </Label>
+              <p className="text-sm text-muted-foreground mb-4">
+                El mejor precio posible, pero requiere más tiempo (30-45 días).
+              </p>
+              <ul className="text-xs space-y-1 text-gray-600">
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Precio máximo del mercado
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Marketing premium
+                </li>
+                <li className="flex items-center">
+                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Atención personalizada
+                </li>
+              </ul>
+            </div>
+          </RadioGroup>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="flex flex-col space-y-4">
+          <Button
+            onClick={handleProceed}
+            className="w-full py-6 text-lg"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                Procesando...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                Continuar con precio {selectedOption === 'quick' ? 'rápido' : selectedOption === 'premium' ? 'premium' : 'equilibrado'} 
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={isLoading}
+          >
+            <Share2 className="mr-2 h-4 w-4" /> Compartir valuación
+          </Button>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Esta valuación es una estimación basada en los datos proporcionados y las condiciones actuales del mercado.
+            El precio final puede variar según la inspección física del vehículo.
+          </p>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };

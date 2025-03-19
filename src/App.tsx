@@ -1,43 +1,28 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import SellerIndex from "./pages/seller/SellerIndex";
 import NotFound from "./pages/NotFound";
-import SellerIndex from "./pages/seller/Index";
+import "./App.css";
 import VehicleValuation from "./pages/seller/VehicleValuation";
-import SellerRegistration from "./pages/seller/SellerRegistration";
 import VerifyPhone from "./pages/seller/VerifyPhone";
 import UserAuth from "./pages/auth/UserAuth";
+import ValuationResults from "./pages/seller/ValuationResults";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          
-          {/* Auth Module Routes */}
-          <Route path="/auth" element={<UserAuth />} />
-          
-          {/* Seller Module Routes */}
-          <Route path="/seller" element={<SellerIndex />} />
-          <Route path="/seller/valuation" element={<VehicleValuation />} />
-          <Route path="/seller/register" element={<SellerRegistration />} />
-          <Route path="/seller/verify" element={<VerifyPhone />} />
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <div className="App">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/seller" element={<SellerIndex />} />
+        <Route path="/seller/valuation" element={<VehicleValuation />} />
+        <Route path="/seller/valuation-results" element={<ValuationResults />} />
+        <Route path="/seller/verify" element={<VerifyPhone />} />
+        <Route path="/auth" element={<UserAuth />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+}
 
 export default App;

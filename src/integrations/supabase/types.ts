@@ -182,6 +182,83 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_listings: {
+        Row: {
+          brand: string
+          condition: string
+          created_at: string
+          currency: string
+          documents: string[] | null
+          estimated_price_balanced: number
+          estimated_price_premium: number
+          estimated_price_quick: number
+          features: string[] | null
+          id: string
+          location: string | null
+          mileage: number
+          model: string
+          photos: string[] | null
+          selected_price_type: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          version: string | null
+          year: string
+        }
+        Insert: {
+          brand: string
+          condition: string
+          created_at?: string
+          currency?: string
+          documents?: string[] | null
+          estimated_price_balanced: number
+          estimated_price_premium: number
+          estimated_price_quick: number
+          features?: string[] | null
+          id?: string
+          location?: string | null
+          mileage: number
+          model: string
+          photos?: string[] | null
+          selected_price_type?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: string | null
+          year: string
+        }
+        Update: {
+          brand?: string
+          condition?: string
+          created_at?: string
+          currency?: string
+          documents?: string[] | null
+          estimated_price_balanced?: number
+          estimated_price_premium?: number
+          estimated_price_quick?: number
+          features?: string[] | null
+          id?: string
+          location?: string | null
+          mileage?: number
+          model?: string
+          photos?: string[] | null
+          selected_price_type?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: string | null
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
