@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 
@@ -7,6 +8,45 @@ const FIXED_WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid';
 // Generate a random 6-digit verification code
 export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Check if a phone number has been verified in the last 30 days
+export const checkIfPhoneVerified = async (
+  phone: string,
+  countryCode: string
+): Promise<boolean> => {
+  try {
+    // Normalize the phone number
+    const normalizedPhone = phone.replace(/\D/g, '');
+    
+    // Query the database for the user with the given phone number
+    const { data, error } = await supabase
+      .from('users')
+      .select('last_verified')
+      .eq('phone', normalizedPhone)
+      .eq('country_code', countryCode)
+      .single();
+    
+    if (error || !data) {
+      console.log('User not found or error:', error);
+      return false;
+    }
+    
+    // If last_verified is null, the user has never been verified
+    if (!data.last_verified) {
+      return false;
+    }
+    
+    // Check if the last verification was within the last 30 days
+    const lastVerified = new Date(data.last_verified);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    return lastVerified > thirtyDaysAgo;
+  } catch (err) {
+    console.error('Error checking verification status:', err);
+    return false;
+  }
 };
 
 // Send verification code via SMS
@@ -159,7 +199,7 @@ export const verifyCodeAndSaveData = async (
           paymentInfo: {
             term,
             monthlyPayment,
-            downPayment: carData.price * (carData.downPaymentPercentage / 100),
+            downPayment: Number(carData.price) * (carData.downPaymentPercentage / 100),
           },
           verificationTime: new Date().toISOString(),
         }),

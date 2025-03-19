@@ -1,3 +1,4 @@
+
 export interface VehicleListing {
   id: string;
   user_id: string;
@@ -27,4 +28,25 @@ export interface ValuationResponse {
   premiumPrice: number;
   currency: string;
   id?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  countryCode?: string;
+  role: 'seller' | 'buyer' | 'both';
+  lastVerified?: string;
+}
+
+export interface VehicleData {
+  brand: string;
+  model: string;
+  year: string;
+  version: string;
+  mileage: number;
+  condition: string;
+  location: string;
+  features: string[];
 }

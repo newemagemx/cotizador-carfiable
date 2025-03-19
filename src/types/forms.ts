@@ -6,6 +6,11 @@ export interface CarData {
   price: string;
   downPaymentPercentage: number;
   carId?: string; // Added for car selection
+  version?: string;
+  mileage?: number;
+  condition?: string;
+  location?: string;
+  features?: string[];
 }
 
 export interface UserData {

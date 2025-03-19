@@ -5,16 +5,19 @@ import { Check } from 'lucide-react';
 
 interface ProgressStepsProps {
   currentStep: number;
-  steps: string[];
+  steps?: string[];
 }
 
-const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep, steps }) => {
+const ProgressSteps: React.FC<ProgressStepsProps> = ({ 
+  currentStep, 
+  steps = ['Información', 'Verificación', 'Resultados'] 
+}) => {
   return (
     <div className="w-full">
       <div className="flex justify-between mb-1">
         {steps.map((step, index) => {
-          const isActive = currentStep >= index;
-          const isComplete = currentStep > index;
+          const isActive = currentStep >= index + 1;
+          const isComplete = currentStep > index + 1;
           
           return (
             <div key={index} className="flex flex-col items-center">
@@ -48,7 +51,7 @@ const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep, steps }) => 
         <div 
           className="absolute top-0 left-0 h-1 bg-primary rounded-full step-progress"
           style={{ 
-            width: `${(100 * currentStep) / (steps.length - 1)}%` 
+            width: `${(100 * (currentStep - 1)) / (steps.length - 1)}%` 
           }} 
         />
       </div>
