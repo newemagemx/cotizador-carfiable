@@ -12,7 +12,7 @@ export const getUserByPhone = async (phone: string, countryCode: string): Promis
     };
     
     const { data, error } = await supabase
-      .rpc<User[]>('get_user_by_phone', {
+      .rpc<User[], unknown>('get_user_by_phone', {
         p_phone: phone,
         p_country_code: countryCode 
       } as GetUserByPhoneParams);
@@ -47,7 +47,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
     };
     
     const { data, error } = await supabase
-      .rpc<User>('create_user', {
+      .rpc<User, unknown>('create_user', {
         p_name: userData.name,
         p_email: userData.email,
         p_phone: userData.phone,
@@ -83,7 +83,7 @@ export const updateUser = async (userId: string, userData: Partial<User>): Promi
     };
     
     const { error } = await supabase
-      .rpc('update_user', {
+      .rpc<unknown, unknown>('update_user', {
         p_id: userId,
         p_name: userData.name,
         p_email: userData.email,
@@ -114,7 +114,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     };
     
     const { data, error } = await supabase
-      .rpc<User>('get_user_by_id', {
+      .rpc<User, unknown>('get_user_by_id', {
         p_id: userId
       } as GetUserByIdParams);
     
