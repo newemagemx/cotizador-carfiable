@@ -52,8 +52,8 @@ const ValuationDecision: React.FC = () => {
         description: 'Vamos a continuar con la publicación de tu vehículo',
       });
 
-      // Navegar a la fase 2 - información detallada del vehículo
-      navigate('/seller/vehicle-details', { 
+      // Navegar a la fase 2 - carga de fotos del vehículo primero
+      navigate('/seller/vehicle-photos', { 
         state: { 
           ...locationState
         } 
