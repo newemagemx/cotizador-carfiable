@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -129,7 +128,7 @@ const ValuationResults = () => {
         setIsLoading(true);
         
         // Safely parse mileage and year as numbers
-        const mileage = parseInt(carData.mileage.toString() || '0');
+        const mileage = parseInt(carData.mileage?.toString() || '0');
         const year = parseInt(carData.year?.toString() || '2020');
         
         // You can replace this with an actual API call when ready
@@ -179,7 +178,7 @@ const ValuationResults = () => {
                 user_id: userId,
                 brand: carData.brand || '',
                 model: carData.model || '',
-                year: year.toString(),
+                year: year,
                 version: carData.version || '',
                 mileage: mileage,
                 condition: carData.condition || 'good',
