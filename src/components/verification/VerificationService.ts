@@ -236,14 +236,15 @@ export const verifyCodeAndSaveData = async (
     setTimeout(() => {
       if (isNewUser) {
         // If this is a new user or no Supabase session exists, go to password setup
-        const session = supabase.auth.session();
-        if (!session) {
-          // Navigate to password setup
-          window.location.href = '/auth/password-setup';
-        } else {
-          // User already has a session, go to results
-          window.location.href = '/seller/valuation-results?success=true';
-        }
+        supabase.auth.getSession().then(({ data }) => {
+          if (!data.session) {
+            // Navigate to password setup
+            window.location.href = '/auth/password-setup';
+          } else {
+            // User already has a session, go to results
+            window.location.href = '/seller/valuation-results?success=true';
+          }
+        });
       } else {
         // Existing user, go directly to results
         window.location.href = '/seller/valuation-results?success=true';
