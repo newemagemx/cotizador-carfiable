@@ -100,7 +100,7 @@ const PricingOption: React.FC<PricingOptionProps> = ({
               'border-gray-200 hover:border-gray-300'
           )}
         >
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center">
             <div className="mb-2">
               <Badge variant="outline" className={details?.colorClasses.badge}>
                 {details?.icon} {details?.title}
@@ -138,7 +138,6 @@ const PricingOption: React.FC<PricingOptionProps> = ({
             <RadioGroupItem
               value={type}
               id={type}
-              className={isSelected ? details?.colorClasses.border : ''}
             />
           </div>
         </div>

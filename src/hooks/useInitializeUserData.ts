@@ -84,10 +84,6 @@ export const useInitializeUserData = () => {
           setErrorMessage("No se encontró información del usuario. Por favor regresa al inicio.");
         }
         
-        if (!carData && !locationCarData) {
-          setErrorMessage("No se encontró información del vehículo. Por favor regresa al inicio.");
-        }
-        
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading user data:", error);

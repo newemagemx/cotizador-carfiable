@@ -23,7 +23,21 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
   };
 
   // Make sure we're safely displaying the car data by checking for nulls/undefined
-  const displayValue = (value: any) => value || 'No especificado';
+  const displayValue = (value: any) => value ? String(value) : 'No especificado';
+
+  // Map condition values to Spanish text
+  const getConditionText = (condition: string | undefined) => {
+    switch (condition) {
+      case 'excellent':
+        return 'Excelente';
+      case 'good':
+        return 'Buena';
+      case 'fair':
+        return 'Regular';
+      default:
+        return 'No especificado';
+    }
+  };
 
   return (
     <motion.div variants={itemVariants}>
@@ -48,15 +62,7 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
               <span className="text-muted-foreground">Kilometraje:</span> {displayValue(carData.mileage)} km
             </div>
             <div>
-              <span className="text-muted-foreground">Condición:</span> {
-                carData.condition === 'excellent' 
-                  ? 'Excelente' 
-                  : carData.condition === 'good' 
-                    ? 'Buena' 
-                    : carData.condition === 'fair' 
-                      ? 'Regular' 
-                      : 'No especificado'
-              }
+              <span className="text-muted-foreground">Condición:</span> {getConditionText(carData.condition)}
             </div>
           </div>
         </CardContent>
