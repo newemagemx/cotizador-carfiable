@@ -25,15 +25,18 @@ const ValuationDecision: React.FC = () => {
     valuationData: any;
   } | null;
 
+  // Asegurarnos de que tenemos un listingId
+  const listingId = locationState?.listingId;
+
   const handlePublish = async () => {
     setIsUpdating(true);
     try {
       // Si tenemos un ID de listing, actualizamos su estado a "published"
-      if (locationState?.listingId) {
+      if (listingId) {
         const { error } = await supabase
           .from('vehicle_listings')
           .update({ status: 'published' })
-          .eq('id', locationState.listingId);
+          .eq('id', listingId);
 
         if (error) {
           console.error('Error actualizando estado del listing:', error);
@@ -45,6 +48,23 @@ const ValuationDecision: React.FC = () => {
           setIsUpdating(false);
           return;
         }
+        
+        // Save listingId to localStorage as backup
+        if (locationState) {
+          localStorage.setItem('valuationData', JSON.stringify({
+            ...locationState,
+            listingId
+          }));
+        }
+      } else {
+        console.error('No se encontró listingId en el state');
+        toast({
+          title: 'Error',
+          description: 'Información de vehículo incompleta',
+          variant: 'destructive'
+        });
+        setIsUpdating(false);
+        return;
       }
 
       toast({
@@ -55,7 +75,8 @@ const ValuationDecision: React.FC = () => {
       // Navegar a la fase 2 - carga de fotos del vehículo primero
       navigate('/seller/vehicle-photos', { 
         state: { 
-          ...locationState
+          ...locationState,
+          listingId
         } 
       });
     } catch (error) {
@@ -130,6 +151,11 @@ const ValuationDecision: React.FC = () => {
                       </span>
                     </div>
                   )}
+                  {listingId && (
+                    <div className="mt-1 text-xs text-blue-600">
+                      ID: {listingId}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -141,7 +167,7 @@ const ValuationDecision: React.FC = () => {
               <div className="grid gap-3">
                 <Button 
                   onClick={handlePublish}
-                  disabled={isUpdating}
+                  disabled={isUpdating || !listingId}
                   className="w-full justify-start gap-3"
                 >
                   <ArrowRight className="h-4 w-4" />

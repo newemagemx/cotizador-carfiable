@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -9,8 +8,9 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Image, UploadCloud, AlertTriangle } from 'lucide-react';
+import { Image, UploadCloud, AlertTriangle, ArrowLeft } from 'lucide-react';
 import ErrorState from '@/components/valuation/ErrorState';
+import { useInitializeUserData } from '@/hooks/useInitializeUserData';
 
 const VehiclePhotos: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +20,18 @@ const VehiclePhotos: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isRecovering, setIsRecovering] = useState(false);
+  
+  // Get user data from custom hook to recover if location state is missing
+  const { 
+    userData, 
+    carData, 
+    errorMessage: userDataError,
+    isLoading: isUserDataLoading 
+  } = useInitializeUserData();
+
+  // Try to get listingId from different locations
+  const [listingId, setListingId] = useState<string | null>(null);
   
   // Recuperar datos del state
   const locationState = location.state as { 
@@ -29,6 +41,81 @@ const VehiclePhotos: React.FC = () => {
     priceType: string;
     valuationData: any;
   } | null;
+
+  // Handle recovery and initialization of data
+  useEffect(() => {
+    const checkAndRecoverData = async () => {
+      console.log("Checking data state:", { locationState, userData, carData });
+      
+      // If we have the listingId from location state, use it
+      if (locationState?.listingId) {
+        setListingId(locationState.listingId);
+        return;
+      }
+      
+      // Otherwise, try to find the most recent vehicle listing for this user
+      if (!isRecovering && !locationState?.listingId) {
+        setIsRecovering(true);
+        
+        try {
+          // First, check if we have a user session
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user?.id) {
+            console.log("Found user session, attempting to recover listing ID");
+            
+            // Get the most recent vehicle listing for this user
+            const { data: listings, error: listingsError } = await supabase
+              .from('vehicle_listings')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (listingsError) {
+              console.error("Error fetching listings:", listingsError);
+              setError("Error al recuperar datos del vehículo. Por favor, inicia el proceso nuevamente.");
+              return;
+            }
+            
+            if (listings && listings.length > 0) {
+              console.log("Recovered listing:", listings[0]);
+              setListingId(listings[0].id);
+              toast({
+                title: "Datos recuperados",
+                description: "Hemos recuperado tu proceso anterior."
+              });
+            } else {
+              setError("No se encontraron vehículos registrados. Por favor, inicia el proceso de valoración.");
+            }
+          } else if (localStorage.getItem('valuationData')) {
+            // Try to recover from localStorage as last resort
+            try {
+              const storedData = JSON.parse(localStorage.getItem('valuationData') || '{}');
+              if (storedData.listingId) {
+                setListingId(storedData.listingId);
+                toast({
+                  title: "Datos recuperados",
+                  description: "Hemos recuperado tu proceso desde almacenamiento local."
+                });
+              }
+            } catch (e) {
+              console.error("Error parsing localStorage data:", e);
+            }
+          } else {
+            setError("No se encontró una sesión de usuario. Por favor, inicia sesión e intenta nuevamente.");
+          }
+        } catch (err) {
+          console.error("Error recovering data:", err);
+          setError("Error al recuperar datos. Por favor, inicia el proceso nuevamente.");
+        } finally {
+          setIsRecovering(false);
+        }
+      }
+    };
+    
+    checkAndRecoverData();
+  }, [locationState, userData, carData, toast]);
 
   const onDrop = useCallback((acceptedFiles: FileWithPreview[]) => {
     const newFiles = acceptedFiles.map(file => 
@@ -58,7 +145,7 @@ const VehiclePhotos: React.FC = () => {
       return;
     }
 
-    if (!locationState?.listingId) {
+    if (!listingId) {
       setError("No se encontró el ID del vehículo. Por favor, inicia el proceso nuevamente.");
       return;
     }
@@ -69,7 +156,7 @@ const VehiclePhotos: React.FC = () => {
     try {
       const uploadPromises = files.map(async (file, index) => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${locationState.listingId}_${Date.now()}_${index}.${fileExt}`;
+        const fileName = `${listingId}_${Date.now()}_${index}.${fileExt}`;
         const filePath = `${fileName}`;
         
         const { error: uploadError } = await supabase.storage
@@ -105,7 +192,7 @@ const VehiclePhotos: React.FC = () => {
           photos: photoUrls,
           updated_at: new Date().toISOString()
         })
-        .eq('id', locationState.listingId);
+        .eq('id', listingId);
       
       if (updateError) {
         throw updateError;
@@ -123,7 +210,8 @@ const VehiclePhotos: React.FC = () => {
       setTimeout(() => {
         navigate('/seller/vehicle-details', { 
           state: { 
-            ...locationState,
+            ...(locationState || {}),
+            listingId,
             photos: photoUrls
           } 
         });
@@ -142,13 +230,47 @@ const VehiclePhotos: React.FC = () => {
 
   const handleSkip = () => {
     navigate('/seller/vehicle-details', { 
-      state: locationState
+      state: { 
+        ...(locationState || {}),
+        listingId
+      }
     });
   };
 
+  const handleGoBack = () => {
+    navigate('/seller/valuation-decision');
+  };
+
+  // Loading state while recovering data
+  if (isRecovering || isUserDataLoading) {
+    return (
+      <div className="container max-w-xl mx-auto py-8 px-4">
+        <Card className="shadow-lg p-6">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <p className="text-center text-lg">Recuperando tus datos...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   // Error handling
   if (error) {
-    return <ErrorState message={error} />;
+    return (
+      <div className="container max-w-xl mx-auto py-8 px-4">
+        <ErrorState message={error} />
+        <div className="mt-6 flex justify-center">
+          <Button 
+            onClick={handleGoBack} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver a valoración
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
