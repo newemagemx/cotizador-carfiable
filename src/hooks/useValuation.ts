@@ -21,35 +21,49 @@ export const useValuation = (
     // Clear any previous error message when dependencies change
     setErrorMessage(null);
     
-    if (!userData || !carData) {
-      console.log("useValuation: Waiting for userData and carData", { userData, carData });
-      return; // Wait until we have both user and car data
-    }
-
+    // Create default objects if carData or userData is null
+    const safeCarData: CarData = carData || {
+      brand: 'Generic',
+      model: 'Model',
+      year: '2020',
+      price: '',
+      downPaymentPercentage: 20,
+      mileage: 0,
+      condition: 'good'
+    };
+    
+    const safeUserData: UserData = userData || {
+      name: 'Anonymous',
+      email: '',
+      phone: ''
+    };
+    
     const performValuation = async () => {
       try {
-        console.log("useValuation: Starting valuation calculation", { userData, carData, userId });
+        console.log("useValuation: Starting valuation calculation", { safeUserData, safeCarData, userId });
         setIsLoading(true);
         
         // Prepare webhook data
-        const webhookData = prepareWebhookData(carData, userData);
+        const webhookData = prepareWebhookData(safeCarData, safeUserData);
         console.log("useValuation: Prepared webhook data", webhookData);
         
         // Calculate valuation
-        const mockValuationResponse = await calculateValuation(carData);
+        const mockValuationResponse = await calculateValuation(safeCarData);
         console.log("useValuation: Generated valuation", mockValuationResponse);
 
         // Store the valuation in the database if we have a userId
         if (userId) {
-          const { data, error } = await saveVehicleListing(userId, carData, mockValuationResponse);
+          const { data, error } = await saveVehicleListing(userId, safeCarData, mockValuationResponse);
           
           if (error) {
+            console.error("Error saving valuation to database:", error);
             toast({
               title: "Error al guardar",
               description: "No se pudo guardar la valuación. " + error.message,
               variant: "destructive",
             });
           } else if (data) {
+            console.log("useValuation: Saved listing with ID", data.id);
             setSavedListingId(data.id);
             mockValuationResponse.id = data.id;
           }

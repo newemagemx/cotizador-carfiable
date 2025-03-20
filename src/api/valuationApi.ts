@@ -48,31 +48,36 @@ export const saveVehicleListing = async (
 ): Promise<{ data: any; error: any }> => {
   console.log("valuationApi: Saving valuation to vehicle_listings for user", userId);
   
-  // Safely parse mileage and year as numbers
-  const mileage = parseInt(carData.mileage?.toString() || '0');
+  // Handle missing or empty input data with defaults
+  const brand = carData.brand || 'Generic';
+  const model = carData.model || 'Model';
   const yearString = carData.year?.toString() || '2020';
+  const version = carData.version || '';
+  const mileage = parseInt(carData.mileage?.toString() || '0');
+  const condition = carData.condition || 'good';
+  const location = carData.location || '';
+  const features = carData.features || [];
   
   try {
     const { data, error } = await supabase
       .from('vehicle_listings')
       .insert({
         user_id: userId,
-        brand: carData.brand || '',
-        model: carData.model || '',
+        brand,
+        model,
         year: yearString,
-        version: carData.version || '',
-        mileage: mileage,
-        condition: carData.condition || 'good',
-        location: carData.location || '',
-        features: carData.features || [],
+        version,
+        mileage,
+        condition,
+        location,
+        features,
         estimated_price_quick: valuationResponse.quickSellPrice,
         estimated_price_balanced: valuationResponse.balancedPrice,
         estimated_price_premium: valuationResponse.premiumPrice,
         currency: 'MXN',
         status: 'draft'
       })
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error saving valuation:', error);
@@ -80,7 +85,7 @@ export const saveVehicleListing = async (
     }
     
     console.log("valuationApi: Successfully saved valuation to vehicle_listings", data);
-    return { data, error: null };
+    return { data: data[0], error: null };
   } catch (err) {
     console.error('Exception saving valuation:', err);
     return { data: null, error: err };

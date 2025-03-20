@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -47,6 +48,21 @@ const ValuationResults = () => {
     isLoading: isUserDataLoading 
   } = useInitializeUserData();
   
+  // Calculate valuation with custom hook - always proceed even with minimal data
+  const processableCarData = carData || { 
+    brand: 'Vehículo', 
+    model: 'Genérico', 
+    year: '2020',
+    price: '',
+    downPaymentPercentage: 20
+  };
+  
+  const processableUserData = userData || { 
+    name: 'Usuario', 
+    email: '', 
+    phone: '' 
+  };
+  
   // Calculate valuation with custom hook
   const { 
     valuationData, 
@@ -54,20 +70,24 @@ const ValuationResults = () => {
     savedListingId, 
     errorMessage: valuationError,
     updateSelectedOption
-  } = useValuation(carData, userData, userId);
+  } = useValuation(processableCarData, processableUserData, userId);
   
   // Log states for debugging
   useEffect(() => {
     console.log("ValuationResults - Current state:", { 
       userData, 
-      carData, 
+      carData,
+      processableCarData,
+      processableUserData, 
       userId, 
       userDataError, 
       valuationData, 
       savedListingId, 
-      valuationError 
+      valuationError,
+      isUserDataLoading,
+      isValuationLoading
     });
-  }, [userData, carData, userId, userDataError, valuationData, savedListingId, valuationError]);
+  }, [userData, carData, processableCarData, processableUserData, userId, userDataError, valuationData, savedListingId, valuationError, isUserDataLoading, isValuationLoading]);
   
   const isLoading = isUserDataLoading || isValuationLoading;
   const errorMessage = userDataError || valuationError;
@@ -87,8 +107,8 @@ const ValuationResults = () => {
         state: { 
           listingId: result.listingId,
           priceType: selectedOption,
-          userData,
-          carData,
+          userData: processableUserData,
+          carData: processableCarData,
           valuationData
         } 
       });
@@ -113,11 +133,6 @@ const ValuationResults = () => {
     }
   };
 
-  // Handle case where we have userData but not carData yet
-  if (!carData || !userData) {
-    return <LoadingState type="loading" />;
-  }
-
   if (errorMessage) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -131,8 +146,8 @@ const ValuationResults = () => {
     );
   }
 
-  if (isLoading && !valuationData) {
-    return <LoadingState type="calculation" carData={carData} />;
+  if (isValuationLoading && !valuationData) {
+    return <LoadingState type="calculation" carData={processableCarData} />;
   }
 
   return (
@@ -144,12 +159,12 @@ const ValuationResults = () => {
         className="space-y-6"
       >
         <ValuationHeader 
-          carBrand={carData.brand} 
-          carModel={carData.model} 
-          carYear={carData.year} 
+          carBrand={processableCarData.brand} 
+          carModel={processableCarData.model} 
+          carYear={processableCarData.year} 
         />
 
-        <CarDetailsCard carData={carData} />
+        <CarDetailsCard carData={processableCarData} />
 
         {valuationData && (
           <PricingOptions 
