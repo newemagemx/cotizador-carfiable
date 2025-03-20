@@ -30,10 +30,11 @@ const PricingOptions: React.FC<PricingOptionsProps> = ({
 
   return (
     <motion.div variants={itemVariants}>
+      <h2 className="text-xl font-semibold mb-4 text-center">Opciones de Precio</h2>
       <RadioGroup
         value={selectedOption}
         onValueChange={onOptionSelect}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
       >
         <PricingOption
           type="quick"
