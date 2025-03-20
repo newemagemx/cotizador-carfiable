@@ -8,49 +8,21 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, User, Mail, Phone } from "lucide-react";
+import { ChevronLeft, User } from "lucide-react";
 import { User as UserType } from "@/types/seller";
 import { checkIfPhoneVerified } from "@/components/verification/VerificationService";
-import CountryCodeSelector, { COUNTRY_CODES } from "@/components/verification/CountryCodeSelector";
+import { COUNTRY_CODES } from "@/components/verification/CountryCodeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-// Form schema for user data
-const sellerSchema = z.object({
-  name: z.string().min(3, "Nombre completo es requerido"),
-  email: z.string().email("Correo electrónico inválido"),
-  phone: z.string().min(8, "Número telefónico inválido"),
-});
+import SellerForm from './components/SellerForm';
 
 const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
-  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0].value);
 
-  const form = useForm<z.infer<typeof sellerSchema>>({
-    resolver: zodResolver(sellerSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-    },
-  });
-
-  const onSubmit = async (data: z.infer<typeof sellerSchema>) => {
+  const handleSubmit = async (data: { name: string; email: string; phone: string }, countryCode: string) => {
     setIsChecking(true);
 
     try {
@@ -153,7 +125,7 @@ const SellerRegistration: React.FC = () => {
       
       if (isVerified) {
         // If the phone is already verified, skip verification step
-        navigate('/seller/valuation/results'); // This page doesn't exist yet, we'll create it later
+        navigate('/seller/valuation-results');
       } else {
         // Phone needs verification
         navigate('/seller/verify');
@@ -195,90 +167,7 @@ const SellerRegistration: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre Completo</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                placeholder="Ej: Juan Pérez González"
-                                {...field}
-                                className="pl-10"
-                              />
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Correo Electrónico</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type="email"
-                                placeholder="ejemplo@correo.com"
-                                {...field}
-                                className="pl-10"
-                              />
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-2">
-                      <FormLabel htmlFor="phone">Número Telefónico</FormLabel>
-                      <div className="flex">
-                        <CountryCodeSelector
-                          value={countryCode}
-                          onChange={setCountryCode}
-                          compact={true}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormControl>
-                                <div className="relative w-full">
-                                  <Input
-                                    type="tel"
-                                    placeholder="6562762136"
-                                    {...field}
-                                    className="rounded-l-none pl-10"
-                                  />
-                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Usaremos este número para enviarte un código de verificación
-                      </p>
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={isChecking}>
-                      {isChecking ? "Verificando..." : "Continuar"}
-                    </Button>
-                  </form>
-                </Form>
+                <SellerForm onSubmit={handleSubmit} isChecking={isChecking} />
               </CardContent>
               <CardFooter className="flex justify-center border-t px-6 py-4">
                 <p className="text-xs text-gray-500 text-center">

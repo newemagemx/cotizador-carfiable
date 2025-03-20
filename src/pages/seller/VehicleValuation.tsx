@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -10,103 +10,24 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+  Form,
+  FormProvider
 } from "@/components/ui/form";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Car, ChevronLeft, ChevronRight } from "lucide-react";
 import { VehicleData } from "@/types/seller";
 
-// Mock data for dropdowns - in a real app, these would come from an API
-const carBrands = [
-  { value: "toyota", label: "Toyota" },
-  { value: "honda", label: "Honda" },
-  { value: "nissan", label: "Nissan" },
-  { value: "volkswagen", label: "Volkswagen" },
-  { value: "chevrolet", label: "Chevrolet" },
-  { value: "ford", label: "Ford" },
-  { value: "bmw", label: "BMW" },
-  { value: "mercedes", label: "Mercedes-Benz" },
-  { value: "audi", label: "Audi" },
-];
+// Import component steps
+import VehicleStep1 from './components/VehicleStep1';
+import VehicleStep2 from './components/VehicleStep2';
+import VehicleStep3 from './components/VehicleStep3';
+import StepProgress from './components/StepProgress';
 
-const carModels = {
-  toyota: [
-    { value: "corolla", label: "Corolla" },
-    { value: "camry", label: "Camry" },
-    { value: "rav4", label: "RAV4" },
-    { value: "highlander", label: "Highlander" },
-    { value: "4runner", label: "4Runner" },
-    { value: "sequoia", label: "Sequoia" },
-  ],
-  honda: [
-    { value: "civic", label: "Civic" },
-    { value: "accord", label: "Accord" },
-    { value: "crv", label: "CR-V" },
-    { value: "pilot", label: "Pilot" },
-  ],
-  // Add models for other brands as needed
-};
-
-const years = Array.from({ length: 22 }, (_, i) => {
-  const year = 2024 - i;
-  return { value: year.toString(), label: year.toString() };
-});
-
-const carVersions = {
-  corolla: [
-    { value: "le", label: "LE" },
-    { value: "se", label: "SE" },
-    { value: "xle", label: "XLE" },
-    { value: "xse", label: "XSE" },
-  ],
-  civic: [
-    { value: "lx", label: "LX" },
-    { value: "sport", label: "Sport" },
-    { value: "ex", label: "EX" },
-    { value: "touring", label: "Touring" },
-  ],
-  // Add versions for other models as needed
-};
-
-const mexicanStates = [
-  { value: "cdmx", label: "Ciudad de México" },
-  { value: "jalisco", label: "Jalisco" },
-  { value: "nuevo_leon", label: "Nuevo León" },
-  { value: "estado_mexico", label: "Estado de México" },
-  { value: "chihuahua", label: "Chihuahua" },
-  { value: "guanajuato", label: "Guanajuato" },
-  // Add more Mexican states as needed
-];
-
-const carFeatures = [
-  { id: "sunroof", label: "Techo solar" },
-  { id: "leather", label: "Asientos de piel" },
-  { id: "navigation", label: "Sistema de navegación" },
-  { id: "bluetooth", label: "Bluetooth" },
-  { id: "camera", label: "Cámara de reversa" },
-  { id: "sensors", label: "Sensores de estacionamiento" },
-  { id: "keyless", label: "Entrada sin llave" },
-  { id: "automatic", label: "Transmisión automática" },
-  { id: "climate", label: "Control de clima automático" },
-  { id: "alloy", label: "Rines de aleación" },
-];
+// Import mock data
+import { carBrands, carModels, carVersions, mexicanStates, carFeatures } from './data/vehicleData';
 
 // Form schema
 const valuationSchema = z.object({
@@ -172,7 +93,7 @@ const VehicleValuation: React.FC = () => {
   const watchModel = form.watch("model");
 
   // Update dependent dropdowns when primary selections change
-  React.useEffect(() => {
+  useEffect(() => {
     if (watchBrand !== selectedBrand) {
       setSelectedBrand(watchBrand);
       form.setValue("model", "");
@@ -180,12 +101,52 @@ const VehicleValuation: React.FC = () => {
     }
   }, [watchBrand, selectedBrand, form]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (watchModel !== selectedModel) {
       setSelectedModel(watchModel);
       form.setValue("version", "");
     }
   }, [watchModel, selectedModel, form]);
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      navigate('/seller');
+    }
+  };
+
+  const handleNext = () => {
+    // Basic validation before moving to next step
+    if (step === 1) {
+      const { brand, model, year, version } = form.getValues();
+      if (!brand || !model || !year || !version) {
+        form.trigger(["brand", "model", "year", "version"]);
+        return;
+      }
+    } else if (step === 2) {
+      const { mileage, condition, location } = form.getValues();
+      if (!mileage || !condition || !location) {
+        form.trigger(["mileage", "condition", "location"]);
+        return;
+      }
+    }
+    setStep(step + 1);
+  };
+
+  // Render the current step content
+  const renderStepContent = () => {
+    switch (step) {
+      case 1:
+        return <VehicleStep1 />;
+      case 2:
+        return <VehicleStep2 />;
+      case 3:
+        return <VehicleStep3 />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -195,13 +156,7 @@ const VehicleValuation: React.FC = () => {
             <Button
               variant="ghost"
               className="mb-6"
-              onClick={() => {
-                if (step > 1) {
-                  setStep(step - 1);
-                } else {
-                  navigate('/seller');
-                }
-              }}
+              onClick={handleBack}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
               {step > 1 ? 'Anterior' : 'Volver'}
@@ -218,279 +173,19 @@ const VehicleValuation: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="mb-6">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Paso {step} de 3</span>
-                    <span className="text-sm text-gray-500">{step === 1 ? 'Información Básica' : step === 2 ? 'Condición y Ubicación' : 'Características'}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${(step / 3) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <StepProgress currentStep={step} totalSteps={3} />
 
-                <Form {...form}>
+                <FormProvider {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    {step === 1 && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="brand"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Marca</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona la marca" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {carBrands.map((brand) => (
-                                    <SelectItem key={brand.value} value={brand.value}>
-                                      {brand.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="model"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Modelo</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                                disabled={!watchBrand}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={!watchBrand ? "Selecciona una marca primero" : "Selecciona el modelo"} />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {watchBrand && 
-                                    carModels[watchBrand as keyof typeof carModels]?.map((model) => (
-                                      <SelectItem key={model.value} value={model.value}>
-                                        {model.label}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="year"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Año</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona el año" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {years.map((year) => (
-                                    <SelectItem key={year.value} value={year.value}>
-                                      {year.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="version"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Versión</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                                disabled={!watchModel}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={!watchModel ? "Selecciona un modelo primero" : "Selecciona la versión"} />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {watchModel && 
-                                    carVersions[watchModel as keyof typeof carVersions]?.map((version) => (
-                                      <SelectItem key={version.value} value={version.value}>
-                                        {version.label}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-
-                    {step === 2 && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="mileage"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Kilometraje</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="Ej: 45000"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="condition"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Estado del vehículo</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona el estado" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="excellent">Excelente</SelectItem>
-                                  <SelectItem value="good">Bueno</SelectItem>
-                                  <SelectItem value="fair">Regular</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="location"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Ubicación</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona tu estado" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {mexicanStates.map((state) => (
-                                    <SelectItem key={state.value} value={state.value}>
-                                      {state.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-
-                    {step === 3 && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="features"
-                          render={() => (
-                            <FormItem>
-                              <div className="mb-4">
-                                <FormLabel>Características del vehículo</FormLabel>
-                                <p className="text-sm text-gray-500">
-                                  Selecciona las características que tiene tu vehículo
-                                </p>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {carFeatures.map((feature) => (
-                                  <FormField
-                                    key={feature.id}
-                                    control={form.control}
-                                    name="features"
-                                    render={({ field }) => {
-                                      return (
-                                        <FormItem
-                                          key={feature.id}
-                                          className="flex flex-row items-start space-x-3 space-y-0"
-                                        >
-                                          <FormControl>
-                                            <Checkbox
-                                              checked={field.value?.includes(feature.id)}
-                                              onCheckedChange={(checked) => {
-                                                const currentValue = field.value || [];
-                                                return checked
-                                                  ? field.onChange([...currentValue, feature.id])
-                                                  : field.onChange(
-                                                      currentValue.filter(
-                                                        (value) => value !== feature.id
-                                                      )
-                                                    );
-                                              }}
-                                            />
-                                          </FormControl>
-                                          <FormLabel className="font-normal cursor-pointer">
-                                            {feature.label}
-                                          </FormLabel>
-                                        </FormItem>
-                                      );
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
+                    {renderStepContent()}
                     
-                    {step === 3 ? (
+                    {step === 3 && (
                       <Button type="submit" className="w-full">
                         Obtener Valoración
                       </Button>
-                    ) : null}
+                    )}
                   </form>
-                </Form>
+                </FormProvider>
               </CardContent>
               <CardFooter className="flex justify-between border-t bg-gray-50 px-6 py-4">
                 {step > 1 && (
@@ -505,23 +200,7 @@ const VehicleValuation: React.FC = () => {
                 {step < 3 && (
                   <Button
                     className="ml-auto"
-                    onClick={() => {
-                      // Basic validation before moving to next step
-                      if (step === 1) {
-                        const { brand, model, year, version } = form.getValues();
-                        if (!brand || !model || !year || !version) {
-                          form.trigger(["brand", "model", "year", "version"]);
-                          return;
-                        }
-                      } else if (step === 2) {
-                        const { mileage, condition, location } = form.getValues();
-                        if (!mileage || !condition || !location) {
-                          form.trigger(["mileage", "condition", "location"]);
-                          return;
-                        }
-                      }
-                      setStep(step + 1);
-                    }}
+                    onClick={handleNext}
                   >
                     Siguiente
                     <ChevronRight className="ml-2 h-4 w-4" />
