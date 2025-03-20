@@ -1,10 +1,11 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 import { ValuationResponse } from '@/types/seller';
-import { calculateValuation, prepareWebhookData } from '@/utils/valuationCalculator';
-import { saveVehicleListing, sendToWebhook, updateVehicleListing } from '@/api/valuationApi';
+
+const WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid'; // Replace with actual webhook for production
 
 export const useValuation = (
   carData: CarData | null,
@@ -16,73 +17,122 @@ export const useValuation = (
   const [isLoading, setIsLoading] = useState(false);
   const [savedListingId, setSavedListingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const calculationDone = useRef(false);
-  const isUpdating = useRef(false);
 
   useEffect(() => {
-    // Only run this effect once per component instance
-    if (calculationDone.current) return;
+    if (!userData || !carData) {
+      return; // Wait until we have both user and car data
+    }
 
-    // Clear any previous error message when dependencies change
-    setErrorMessage(null);
-    
-    // Create default objects if carData or userData is null
-    const safeCarData: CarData = carData || {
-      brand: 'Generic',
-      model: 'Model',
-      year: '2020',
-      price: '',
-      downPaymentPercentage: 20,
-      mileage: 0,
-      condition: 'good'
-    };
-    
-    const safeUserData: UserData = userData || {
-      name: 'Anonymous',
-      email: '',
-      phone: ''
-    };
-    
-    const performValuation = async () => {
+    const calculateValuation = async () => {
+      // This would be replaced with an actual API call to a valuation service
       try {
-        console.log("useValuation: Starting valuation calculation", { safeUserData, safeCarData, userId });
+        // For now, simulate an API call with setTimeout
         setIsLoading(true);
         
-        // Prepare webhook data
-        const webhookData = prepareWebhookData(safeCarData, safeUserData);
-        console.log("useValuation: Prepared webhook data", webhookData);
+        // Safely parse mileage and year as numbers
+        const mileage = parseInt(carData.mileage?.toString() || '0');
+        const yearString = carData.year?.toString() || '2020';
         
-        // Calculate valuation
-        const mockValuationResponse = await calculateValuation(safeCarData);
-        console.log("useValuation: Generated valuation", mockValuationResponse);
+        // You can replace this with an actual API call when ready
+        const webhookData = {
+          car: {
+            brand: carData.brand || '',
+            model: carData.model || '',
+            year: yearString,
+            version: carData.version || '',
+            mileage: mileage,
+            condition: carData.condition || 'good',
+          },
+          user: {
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+          }
+        };
 
-        // Store the valuation in the database if we have a userId
+        // This is currently just a mock response - in production connect to your valuation API
+        const mockValuationResponse = await new Promise<ValuationResponse>((resolve) => {
+          setTimeout(() => {
+            // Mock price calculation based on car data
+            const basePrice = 350000; // Base price for example
+            const yearNumber = parseInt(yearString);
+            const mileageImpact = mileage * -0.05; // Reduce price by mileage
+            const yearImpact = (2023 - yearNumber) * -10000; // Older cars worth less
+            
+            const balancedPrice = Math.round(basePrice + mileageImpact + yearImpact);
+            const quickPrice = Math.round(balancedPrice * 0.85); // 15% less for quick sale
+            const premiumPrice = Math.round(balancedPrice * 1.15); // 15% more for premium
+            
+            resolve({
+              quickSellPrice: quickPrice,
+              balancedPrice: balancedPrice,
+              premiumPrice: premiumPrice,
+              currency: 'MXN'
+            });
+          }, 1500);
+        });
+
+        // Store the valuation in the database
         if (userId) {
           try {
-            const { data, error } = await saveVehicleListing(userId, safeCarData, mockValuationResponse);
-            
+            const { data, error } = await supabase
+              .from('vehicle_listings')
+              .insert({
+                user_id: userId,
+                brand: carData.brand || '',
+                model: carData.model || '',
+                year: yearString,
+                version: carData.version || '',
+                mileage: mileage,
+                condition: carData.condition || 'good',
+                location: carData.location || '',
+                features: carData.features || [],
+                estimated_price_quick: mockValuationResponse.quickSellPrice,
+                estimated_price_balanced: mockValuationResponse.balancedPrice,
+                estimated_price_premium: mockValuationResponse.premiumPrice,
+                currency: 'MXN',
+                status: 'draft'
+              })
+              .select()
+              .single();
+
             if (error) {
-              console.error("Error saving valuation to database:", error);
-              // Continue even if saving to DB fails - don't block the UI
+              console.error('Error saving valuation:', error);
+              toast({
+                title: "Error al guardar",
+                description: "No se pudo guardar la valuación. " + error.message,
+                variant: "destructive",
+              });
             } else if (data) {
-              console.log("useValuation: Saved listing with ID", data.id);
               setSavedListingId(data.id);
               mockValuationResponse.id = data.id;
             }
-          } catch (dbError) {
-            console.error("Exception when saving to database:", dbError);
-            // Continue without DB save
+          } catch (err) {
+            console.error('Exception saving valuation:', err);
           }
-        } else {
-          console.log("useValuation: No userId provided, skipping database save");
         }
 
-        // Don't wait for webhook - it's often unavailable in development
-        sendToWebhook(webhookData, mockValuationResponse)
-          .catch(err => console.warn("Webhook notification failed (non-critical):", err));
+        // Send to webhook for testing/integration
+        try {
+          const webhookResponse = await fetch(WEBHOOK_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...webhookData,
+              valuation: mockValuationResponse
+            }),
+          });
+          
+          if (!webhookResponse.ok) {
+            console.warn('Webhook notification failed:', await webhookResponse.text());
+          }
+        } catch (err) {
+          console.warn('Webhook error:', err);
+        }
 
         setValuationData(mockValuationResponse);
-        calculationDone.current = true;
         setIsLoading(false);
       } catch (error) {
         console.error('Error during valuation:', error);
@@ -96,56 +146,46 @@ export const useValuation = (
       }
     };
 
-    performValuation();
+    calculateValuation();
   }, [carData, userData, userId, toast]);
 
-  const updateSelectedOption = useCallback(async (selectedOption: string, listingId: string | null) => {
-    // Prevent multiple simultaneous calls
-    if (isUpdating.current) return { success: false, listingId };
+  const updateSelectedOption = async (selectedOption: string, listingId: string | null) => {
+    setIsLoading(true);
     
-    try {
-      isUpdating.current = true;
-      setIsLoading(true);
-      
-      // If we have a listing ID, update it with the selected price type
-      if (listingId) {
-        try {
-          const { success, error } = await updateVehicleListing(selectedOption, listingId);
+    // If we have a listing ID, update it with the selected price type
+    if (listingId) {
+      try {
+        const { error } = await supabase
+          .from('vehicle_listings')
+          .update({ 
+            selected_price_type: selectedOption,
+            status: 'published'
+          })
+          .eq('id', listingId);
           
-          if (!success) {
-            console.error("Failed to update listing with selected option:", error);
-            toast({
-              title: "Error al actualizar",
-              description: "No se pudo actualizar la selección. " + (error?.message || ''),
-              variant: "destructive",
-            });
-            // Continue even if update fails
-          }
-        } catch (err) {
-          console.error("Exception updating listing:", err);
-          // Continue even if update fails
+        if (error) {
+          console.error('Error updating listing:', error);
+          toast({
+            title: "Error al actualizar",
+            description: "No se pudo actualizar la selección. " + error.message,
+            variant: "destructive",
+          });
         }
-      } else {
-        console.log("useValuation: No listing ID available, skipping update");
+      } catch (err) {
+        console.error('Exception updating listing:', err);
       }
-      
-      // Show success message
-      toast({
-        title: "¡Excelente elección!",
-        description: "Hemos registrado tu preferencia de precio. Te contactaremos pronto.",
-      });
-      
-      setIsLoading(false);
-      isUpdating.current = false;
-      
-      return { success: true, listingId };
-    } catch (error) {
-      console.error("Error in updateSelectedOption:", error);
-      setIsLoading(false);
-      isUpdating.current = false;
-      return { success: false, listingId };
     }
-  }, [toast]);
+    
+    // Show success message
+    toast({
+      title: "¡Excelente elección!",
+      description: "Hemos registrado tu preferencia de precio. Te contactaremos pronto.",
+    });
+    
+    setIsLoading(false);
+    
+    return { success: true, listingId };
+  };
 
   return {
     valuationData,

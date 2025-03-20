@@ -1,12 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 // Import custom hooks
 import { useInitializeUserData } from '@/hooks/useInitializeUserData';
 import { useValuation } from '@/hooks/useValuation';
-import { useToast } from '@/hooks/use-toast';
 
 // Import components
 import ValuationHeader from '@/components/valuation/ValuationHeader';
@@ -16,28 +15,10 @@ import ActionButtons from '@/components/valuation/ActionButtons';
 import ValuationFooter from '@/components/valuation/ValuationFooter';
 import LoadingState from '@/components/valuation/LoadingState';
 import ErrorState from '@/components/valuation/ErrorState';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
 
 const ValuationResults = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [searchParams] = useSearchParams();
   const [selectedOption, setSelectedOption] = useState<string>('balanced');
-  const [retryCount, setRetryCount] = useState(0);
-  
-  // Check if we're coming from a successful verification
-  const success = searchParams.get('success') === 'true';
-  
-  useEffect(() => {
-    // Show success toast when redirected after verification
-    if (success) {
-      toast({
-        title: "Verificación exitosa",
-        description: "Tu identidad ha sido verificada correctamente.",
-      });
-    }
-  }, [success, toast]);
   
   // Initialize user data with custom hook
   const { 
@@ -48,28 +29,6 @@ const ValuationResults = () => {
     isLoading: isUserDataLoading 
   } = useInitializeUserData();
   
-  // Preparamos datos del coche con valores por defecto explícitos
-  const processableCarData = {
-    brand: carData?.brand || 'Vehículo',
-    model: carData?.model || 'Genérico',
-    year: carData?.year || '2020',
-    price: carData?.price || '',
-    downPaymentPercentage: carData?.downPaymentPercentage || 20,
-    version: carData?.version || '',
-    mileage: carData?.mileage || 0,
-    condition: carData?.condition || 'good',
-    location: carData?.location || '',
-    features: carData?.features || []
-  };
-  
-  // Preparamos datos de usuario
-  const processableUserData = {
-    name: userData?.name || 'Usuario', 
-    email: userData?.email || '', 
-    phone: userData?.phone || '',
-    countryCode: userData?.countryCode || '+52'
-  };
-  
   // Calculate valuation with custom hook
   const { 
     valuationData, 
@@ -77,24 +36,7 @@ const ValuationResults = () => {
     savedListingId, 
     errorMessage: valuationError,
     updateSelectedOption
-  } = useValuation(processableCarData, processableUserData, userId);
-  
-  // Log states for debugging
-  useEffect(() => {
-    console.log("ValuationResults - Current state:", { 
-      userData, 
-      carData,
-      processableCarData,
-      processableUserData, 
-      userId, 
-      userDataError, 
-      valuationData, 
-      savedListingId, 
-      valuationError,
-      isUserDataLoading,
-      isValuationLoading
-    });
-  }, [userData, carData, processableCarData, processableUserData, userId, userDataError, valuationData, savedListingId, valuationError, isUserDataLoading, isValuationLoading]);
+  } = useValuation(carData, userData, userId);
   
   const isLoading = isUserDataLoading || isValuationLoading;
   const errorMessage = userDataError || valuationError;
@@ -114,19 +56,12 @@ const ValuationResults = () => {
         state: { 
           listingId: result.listingId,
           priceType: selectedOption,
-          userData: processableUserData,
-          carData: processableCarData,
+          userData,
+          carData,
           valuationData
         } 
       });
     }
-  };
-
-  const handleRetry = () => {
-    // Force a retry by incrementing retryCount
-    setRetryCount(prev => prev + 1);
-    // Reload the page to re-fetch all data
-    window.location.reload();
   };
 
   // Animation variants
@@ -141,20 +76,16 @@ const ValuationResults = () => {
   };
 
   if (errorMessage) {
-    return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
-        <ErrorState message={errorMessage} />
-        <div className="mt-4 flex justify-center">
-          <Button onClick={handleRetry} className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Reintentar
-          </Button>
-        </div>
-      </div>
-    );
+    return <ErrorState message={errorMessage} />;
   }
 
-  if (isValuationLoading && !valuationData) {
-    return <LoadingState type="calculation" carData={processableCarData} />;
+  if (isLoading && !valuationData) {
+    return <LoadingState type="calculation" carData={carData} />;
+  }
+
+  // Handle case where we have userData but not carData yet
+  if (!carData || !userData) {
+    return <LoadingState type="loading" />;
   }
 
   return (
@@ -166,12 +97,12 @@ const ValuationResults = () => {
         className="space-y-6"
       >
         <ValuationHeader 
-          carBrand={processableCarData.brand} 
-          carModel={processableCarData.model} 
-          carYear={processableCarData.year} 
+          carBrand={carData.brand} 
+          carModel={carData.model} 
+          carYear={carData.year} 
         />
 
-        <CarDetailsCard carData={processableCarData} />
+        <CarDetailsCard carData={carData} />
 
         {valuationData && (
           <PricingOptions 
