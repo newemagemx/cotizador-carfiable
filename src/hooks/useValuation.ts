@@ -19,13 +19,18 @@ export const useValuation = (
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Clear any previous error message when dependencies change
+    setErrorMessage(null);
+    
     if (!userData || !carData) {
+      console.log("useValuation: Waiting for userData and carData", { userData, carData });
       return; // Wait until we have both user and car data
     }
 
     const calculateValuation = async () => {
       // This would be replaced with an actual API call to a valuation service
       try {
+        console.log("useValuation: Starting valuation calculation", { userData, carData, userId });
         // For now, simulate an API call with setTimeout
         setIsLoading(true);
         
@@ -49,6 +54,8 @@ export const useValuation = (
             phone: userData.phone || '',
           }
         };
+        
+        console.log("useValuation: Prepared webhook data", webhookData);
 
         // This is currently just a mock response - in production connect to your valuation API
         const mockValuationResponse = await new Promise<ValuationResponse>((resolve) => {
@@ -71,10 +78,13 @@ export const useValuation = (
             });
           }, 1500);
         });
+        
+        console.log("useValuation: Generated mock valuation", mockValuationResponse);
 
         // Store the valuation in the database
         if (userId) {
           try {
+            console.log("useValuation: Saving valuation to database for user", userId);
             const { data, error } = await supabase
               .from('vehicle_listings')
               .insert({
@@ -104,16 +114,20 @@ export const useValuation = (
                 variant: "destructive",
               });
             } else if (data) {
+              console.log("useValuation: Successfully saved valuation", data);
               setSavedListingId(data.id);
               mockValuationResponse.id = data.id;
             }
           } catch (err) {
             console.error('Exception saving valuation:', err);
           }
+        } else {
+          console.log("useValuation: No userId provided, skipping database save");
         }
 
         // Send to webhook for testing/integration
         try {
+          console.log("useValuation: Sending data to webhook", WEBHOOK_ENDPOINT);
           const webhookResponse = await fetch(WEBHOOK_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -127,6 +141,8 @@ export const useValuation = (
           
           if (!webhookResponse.ok) {
             console.warn('Webhook notification failed:', await webhookResponse.text());
+          } else {
+            console.log("useValuation: Webhook notification successful");
           }
         } catch (err) {
           console.warn('Webhook error:', err);
@@ -155,6 +171,7 @@ export const useValuation = (
     // If we have a listing ID, update it with the selected price type
     if (listingId) {
       try {
+        console.log("useValuation: Updating selected price type", { listingId, selectedOption });
         const { error } = await supabase
           .from('vehicle_listings')
           .update({ 
@@ -170,10 +187,14 @@ export const useValuation = (
             description: "No se pudo actualizar la selección. " + error.message,
             variant: "destructive",
           });
+        } else {
+          console.log("useValuation: Successfully updated listing with selected price type");
         }
       } catch (err) {
         console.error('Exception updating listing:', err);
       }
+    } else {
+      console.log("useValuation: No listing ID available, skipping update");
     }
     
     // Show success message
