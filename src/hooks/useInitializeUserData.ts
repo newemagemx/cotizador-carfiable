@@ -69,7 +69,7 @@ export const useInitializeUserData = () => {
                   model: listing.model || '',
                   year: listing.year ? listing.year.toString() : '',
                   version: listing.version || '',
-                  mileage: listing.mileage ? listing.mileage.toString() : '0',
+                  mileage: listing.mileage ? Number(listing.mileage) : 0,
                   condition: listing.condition || 'good',
                   price: '',
                   downPaymentPercentage: 20

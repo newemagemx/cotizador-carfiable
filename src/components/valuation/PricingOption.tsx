@@ -32,7 +32,12 @@ const PricingOption: React.FC<PricingOptionProps> = ({
             border: 'border-orange-500',
             bg: 'bg-orange-50',
             checkIcon: 'text-orange-500'
-          }
+          },
+          features: [
+            'Proceso acelerado',
+            'Menos trámites',
+            'Pago inmediato'
+          ]
         };
       
       case 'balanced':
@@ -45,7 +50,12 @@ const PricingOption: React.FC<PricingOptionProps> = ({
             border: 'border-blue-500',
             bg: 'bg-blue-50',
             checkIcon: 'text-blue-500'
-          }
+          },
+          features: [
+            'Mejor precio que la venta rápida',
+            'Tiempo razonable',
+            'Mayor exposición'
+          ]
         };
       
       case 'premium':
@@ -58,7 +68,12 @@ const PricingOption: React.FC<PricingOptionProps> = ({
             border: 'border-purple-500',
             bg: 'bg-purple-50',
             checkIcon: 'text-purple-500'
-          }
+          },
+          features: [
+            'Precio máximo del mercado',
+            'Marketing premium',
+            'Atención personalizada'
+          ]
         };
     }
   };
@@ -93,7 +108,7 @@ const PricingOption: React.FC<PricingOptionProps> = ({
         {details.description}
       </p>
       <ul className="text-xs space-y-1 text-gray-600">
-        {getOptionDetails().features.map((feature, index) => (
+        {details.features.map((feature, index) => (
           <li key={index} className="flex items-center">
             <Check className={cn("h-3 w-3 mr-1", details.colorClasses.checkIcon)} /> 
             {feature}
