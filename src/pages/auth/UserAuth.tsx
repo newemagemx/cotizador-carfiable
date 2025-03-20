@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -113,8 +114,8 @@ const UserAuth: React.FC = () => {
         description: "Tu cuenta ha sido creada correctamente",
       });
 
-      // Redirect to profile or verification page
-      navigate('/verify');
+      // Redirect to the correct verification page path
+      navigate('/seller/verify');
     } catch (error: any) {
       toast({
         title: "Error de registro",
