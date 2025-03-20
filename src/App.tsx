@@ -14,6 +14,8 @@ import VerifyPhone from './pages/seller/VerifyPhone';
 import ValuationResults from './pages/seller/ValuationResults';
 import CreateAccount from './pages/auth/CreateAccount';
 import ValuationDecision from './pages/seller/ValuationDecision';
+import VehiclePhotos from './pages/seller/VehiclePhotos';
+import VehicleDetails from './pages/seller/VehicleDetails';
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
       <Route path="/seller/register" element={<SellerRegistration />} />
       <Route path="/seller/verify" element={<VerifyPhone />} />
       <Route path="/seller/valuation-results" element={<ValuationResults />} />
+      <Route path="/seller/vehicle-photos" element={<VehiclePhotos />} />
+      <Route path="/seller/vehicle-details" element={<VehicleDetails />} />
 
       {/* Nuevas rutas de vendedor - Fase 1 */}
       <Route path="/auth/create-account" element={<CreateAccount />} />
