@@ -3,9 +3,6 @@ import React from 'react';
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
-import { 
-  FormProvider,
-} from "@/components/ui/form";
 import { ValuationFormValues } from '../utils/vehicleValuationSchema';
 
 interface ValuationFormProps {
@@ -16,6 +13,10 @@ interface ValuationFormProps {
   onNext?: () => void;
 }
 
+/**
+ * Form container component for vehicle valuation
+ * Handles form navigation and submission
+ */
 const ValuationForm: React.FC<ValuationFormProps> = ({ 
   children, 
   onSubmit, 

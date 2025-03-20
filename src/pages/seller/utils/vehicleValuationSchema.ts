@@ -19,3 +19,10 @@ export const valuationSchema = z.object({
 });
 
 export type ValuationFormValues = z.infer<typeof valuationSchema>;
+
+// Export condition labels for consistency
+export const conditionOptions = [
+  { value: "excellent", label: "Excelente" },
+  { value: "good", label: "Bueno" },
+  { value: "fair", label: "Regular" },
+];
