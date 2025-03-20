@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Share2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActionButtonsProps {
   selectedOption: string;
@@ -15,6 +16,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   isLoading, 
   onProceed 
 }) => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
@@ -36,9 +40,37 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   };
 
   // Create a handler that prevents multiple clicks
-  const handleProceed = () => {
-    if (isLoading) return;
-    onProceed();
+  const handleProceed = async () => {
+    // Evitar múltiples clics o procesar durante carga
+    if (isLoading || isSubmitting) {
+      console.log("ActionButtons: Evitando múltiples envíos - isLoading:", isLoading, "isSubmitting:", isSubmitting);
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      console.log("ActionButtons: Iniciando proceso de continuar con precio", getSelectedLabel());
+      await onProceed();
+    } catch (error) {
+      console.error("ActionButtons: Error al procesar:", error);
+      toast({
+        title: "Error al procesar",
+        description: "No se pudo procesar tu solicitud. Por favor intenta de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Combinar estados para saber si está procesando
+  const isProcessing = isLoading || isSubmitting;
+
+  const handleShare = () => {
+    toast({
+      title: "Función en desarrollo",
+      description: "La función de compartir estará disponible próximamente.",
+    });
   };
 
   return (
@@ -46,9 +78,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       <Button
         onClick={handleProceed}
         className="w-full py-6 text-lg"
-        disabled={isLoading}
+        disabled={isProcessing}
       >
-        {isLoading ? (
+        {isProcessing ? (
           <span className="flex items-center">
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
             Procesando...
@@ -64,7 +96,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       <Button
         variant="outline"
         className="w-full"
-        disabled={isLoading}
+        disabled={isProcessing}
+        onClick={handleShare}
       >
         <Share2 className="mr-2 h-4 w-4" /> Compartir valuación
       </Button>

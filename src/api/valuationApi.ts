@@ -61,10 +61,11 @@ export const saveVehicleListing = async (
 ): Promise<{ data: any; error: any }> => {
   console.log("valuationApi: Saving valuation to vehicle_listings for user", userId);
   
-  // Handle missing or empty input data with defaults
-  const brand = carData.brand || 'Generic';
-  const model = carData.model || 'Model';
-  const yearString = carData.year?.toString() || '2020';
+  // Asegurar que tenemos valores válidos para todos los campos requeridos
+  // Verificamos los campos y proporcionamos valores predeterminados si es necesario
+  const brand = carData.brand || 'Vehículo';
+  const model = carData.model || 'Genérico';
+  const yearString = carData.year?.toString() || '2023';
   const version = carData.version || '';
   const mileage = parseInt(carData.mileage?.toString() || '0');
   const condition = carData.condition || 'good';
@@ -72,6 +73,16 @@ export const saveVehicleListing = async (
   const features = carData.features || [];
   
   try {
+    console.log("valuationApi: Insertando datos en vehicle_listings:", {
+      user_id: userId,
+      brand, model, yearString, version, mileage, condition, location, features,
+      estimated_prices: {
+        quick: valuationResponse.quickSellPrice,
+        balanced: valuationResponse.balancedPrice,
+        premium: valuationResponse.premiumPrice
+      }
+    });
+    
     const { data, error } = await supabase
       .from('vehicle_listings')
       .insert({

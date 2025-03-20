@@ -22,12 +22,23 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
     }
   };
 
-  // Make sure we're safely displaying the car data by checking for nulls/undefined
-  const displayValue = (value: any) => value ? String(value) : 'No especificado';
+  // Mejora: Aseguramos que siempre mostramos valores reales, no valores predeterminados genéricos
+  const hasRealData = carData && 
+    carData.brand && 
+    carData.brand !== 'Vehículo' && 
+    carData.brand !== 'Generic';
 
-  // Map condition values to Spanish text
-  const getConditionText = (condition: string | undefined) => {
-    switch (condition) {
+  // Función mejorada para mostrar valores con mejor manejo de nulos/indefinidos
+  const displayValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') return 'No especificado';
+    return String(value);
+  };
+
+  // Mapeo mejorado de texto de condición a español
+  const getConditionText = (condition: string | undefined): string => {
+    if (!condition) return 'No especificado';
+    
+    switch (condition.toLowerCase()) {
       case 'excellent':
         return 'Excelente';
       case 'good':
@@ -35,20 +46,32 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
       case 'fair':
         return 'Regular';
       default:
-        return 'No especificado';
+        return condition; // Devuelve el valor original si no coincide
     }
   };
 
-  // Log the actual carData being received
-  console.log("CarDetailsCard received carData:", carData);
-  
-  // Ensure carData exists and has necessary properties
+  // Valores para mostrar
   const brand = displayValue(carData?.brand);
   const model = displayValue(carData?.model);
   const year = displayValue(carData?.year);
   const version = carData?.version ? carData.version : '';
-  const mileage = carData?.mileage !== undefined ? carData.mileage : 'No especificado';
+  const mileage = carData?.mileage !== undefined ? `${carData.mileage} km` : 'No especificado';
   const condition = getConditionText(carData?.condition);
+
+  // Si los datos son genéricos, mostramos un mensaje
+  const displayBrand = hasRealData ? brand : 'No especificado';
+  const displayModel = hasRealData ? model : '';
+  const displayYear = hasRealData ? year : '';
+
+  console.log("CarDetailsCard - Datos recibidos:", {
+    carData,
+    isGeneric: !hasRealData,
+    displayBrand,
+    displayModel,
+    displayYear,
+    mileage,
+    condition
+  });
 
   return (
     <motion.div variants={itemVariants}>
@@ -62,7 +85,7 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
           </CardTitle>
           <CardDescription>
             <span className="font-semibold">
-              {brand} {model} {year}
+              {displayBrand} {displayModel} {displayYear}
             </span>
             {version && <span> - {version}</span>}
           </CardDescription>
@@ -70,7 +93,7 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Kilometraje:</span> {mileage !== 'No especificado' ? `${mileage} km` : mileage}
+              <span className="text-muted-foreground">Kilometraje:</span> {mileage}
             </div>
             <div>
               <span className="text-muted-foreground">Condición:</span> {condition}
