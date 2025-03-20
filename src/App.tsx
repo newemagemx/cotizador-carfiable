@@ -9,6 +9,7 @@ import VehicleValuation from "./pages/seller/VehicleValuation";
 import VerifyPhone from "./pages/seller/VerifyPhone";
 import UserAuth from "./pages/auth/UserAuth";
 import ValuationResults from "./pages/seller/ValuationResults";
+import SellerRegistration from "./pages/seller/SellerRegistration";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/seller/valuation" element={<VehicleValuation />} />
         <Route path="/seller/valuation-results" element={<ValuationResults />} />
         <Route path="/seller/verify" element={<VerifyPhone />} />
+        <Route path="/seller/register" element={<SellerRegistration />} />
         <Route path="/auth" element={<UserAuth />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
