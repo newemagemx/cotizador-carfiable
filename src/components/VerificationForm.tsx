@@ -96,7 +96,37 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
     setIsLoading(true);
     setError("");
     
-    // Simulate verification process with a delay
+    if (verificationCode.length !== 6) {
+      setError("Por favor ingresa el código completo de 6 dígitos");
+      setIsLoading(false);
+      return;
+    }
+    
+    // For test purposes, if using test phone, always succeed
+    const isTestPhone = (userData.countryCode || '+52') + userData.phone === '+521234567890';
+    
+    if (isTestPhone && verificationCode === '000000') {
+      toast({
+        title: "Verificación exitosa",
+        description: "Tu número ha sido verificado correctamente.",
+      });
+      
+      // Use the verification service to save data and navigate
+      await verifyCodeAndSaveData(
+        verificationCode,
+        verificationCode, // For test account, codes always match
+        carData,
+        userData,
+        userData.countryCode || '+52',
+        defaultTerm,
+        monthlyPayment,
+        onVerified
+      );
+      
+      return;
+    }
+    
+    // For real verification:
     setTimeout(async () => {
       const success = await verifyCodeAndSaveData(
         verificationCode,
@@ -109,15 +139,30 @@ const VerificationForm: React.FC<VerificationFormProps> = ({
         onVerified
       );
       
-      if (!success) {
+      if (success) {
+        toast({
+          title: "Verificación exitosa",
+          description: "Tu número ha sido verificado correctamente.",
+        });
+      } else {
         setError("El código ingresado no es válido. Inténtalo nuevamente.");
         setIsLoading(false);
+        
+        toast({
+          title: "Verificación fallida",
+          description: "El código ingresado no es válido. Por favor intenta nuevamente.",
+          variant: "destructive",
+        });
       }
     }, 1000);
   };
 
   const handleResend = () => {
     if (canResend) {
+      toast({
+        title: "Reenviando código",
+        description: "Un nuevo código ha sido enviado a tu teléfono.",
+      });
       sendCode();
     }
   };

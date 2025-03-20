@@ -52,16 +52,20 @@ export const useVerificationCode = ({ userData, countryCode }: UseVerificationCo
         countryCode,
         code,
         () => {
-          // Start countdown for resend button
+          // Success callback - start countdown for resend button
           setCountdown(60);
           setCanResend(false);
+          console.log("SMS sent successfully, you can use code:", code);
         },
-        () => {
-          // Error handling is done in the service
+        (errorMsg) => {
+          // Error callback
+          setError(errorMsg || "Error sending verification code");
+          console.error("Failed to send SMS:", errorMsg);
         }
       );
     } catch (err) {
       console.error("Error in sendCode:", err);
+      setError("Error sending verification code");
     } finally {
       setIsLoading(false);
       setIsSendingSMS(false);
