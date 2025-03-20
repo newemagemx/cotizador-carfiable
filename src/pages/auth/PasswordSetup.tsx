@@ -106,34 +106,59 @@ const PasswordSetup: React.FC = () => {
     setIsLoading(true);
 
     try {
+      console.log("Creating user account with email:", userData.email);
+      
       // Create user account with Supabase
       const { data: authData, error } = await supabase.auth.signUp({
         email: userData.email,
         password: data.password,
         options: {
           data: {
-            name: userData.name,
+            full_name: userData.name,
             phone: userData.phone,
-            country_code: userData.countryCode,
+            country_code: userData.countryCode || '+52',
           },
+          emailRedirectTo: `${window.location.origin}/seller/valuation-results`
         },
       });
 
       if (error) {
+        console.error("Signup error:", error);
         throw error;
       }
 
-      toast({
-        title: "Cuenta creada exitosamente",
-        description: "Tu cuenta ha sido configurada correctamente",
-      });
+      if (authData.user) {
+        console.log("User created successfully:", authData.user.id);
+        
+        toast({
+          title: "Cuenta creada exitosamente",
+          description: "Tu cuenta ha sido configurada correctamente",
+        });
 
-      // Navigate to valuation results or next step
-      navigate('/seller/valuation-results');
+        // Navigate to valuation results or next step
+        navigate('/seller/valuation-results');
+      } else {
+        // This should not happen but just in case
+        throw new Error("No se pudo crear la cuenta de usuario");
+      }
     } catch (error: any) {
+      console.error("Full error details:", error);
+      
+      // Handle specific error cases
+      let errorMessage = "Ocurrió un error al configurar tu cuenta";
+      
+      if (error.message.includes("Password should be at least") || 
+          error.message.includes("contraseña")) {
+        errorMessage = "La contraseña no cumple con los requisitos mínimos de seguridad";
+      } else if (error.message.includes("User already registered")) {
+        errorMessage = "Este correo electrónico ya está registrado";
+      } else if (error.message.includes("rate limited")) {
+        errorMessage = "Demasiados intentos. Por favor, intenta más tarde";
+      }
+      
       toast({
         title: "Error al crear la cuenta",
-        description: error.message || "Ocurrió un error al configurar tu cuenta",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -146,7 +171,7 @@ const PasswordSetup: React.FC = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/seller/valuation-results',
+          redirectTo: `${window.location.origin}/seller/valuation-results`,
         },
       });
 
