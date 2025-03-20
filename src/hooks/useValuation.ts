@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 import { ValuationResponse } from '@/types/seller';
 
-const WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid'; // Replace with actual webhook for production
+const WEBHOOK_ENDPOINT = 'https://webhook-test.com/c9f525259444e849009b37884b2d0885'; // Updated webhook URL
 
 export const useValuation = (
   carData: CarData | null,

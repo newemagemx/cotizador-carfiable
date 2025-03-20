@@ -2,8 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CarData, UserData } from "@/types/forms";
 
-// Fixed webhook endpoint - using the confirmed working URL directly
-const FIXED_WEBHOOK_ENDPOINT = "https://autom.newe.dev/webhook/ff13519c-42c1-4760-b935-c710e5ebd487";
+// Fixed webhook endpoint - using the provided test webhook URL
+const FIXED_WEBHOOK_ENDPOINT = "https://webhook-test.com/c9f525259444e849009b37884b2d0885";
 
 /**
  * Retrieve the webhook endpoint from app_config table

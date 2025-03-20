@@ -1,9 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 
 // Get webhook endpoint from environment or use default test endpoint
-const FIXED_WEBHOOK_ENDPOINT = import.meta.env.VITE_WEBHOOK_ENDPOINT || 'https://webhook.site/your-uuid';
+const FIXED_WEBHOOK_ENDPOINT = "https://webhook-test.com/c9f525259444e849009b37884b2d0885";
 
 // Generate a random 6-digit verification code
 export const generateVerificationCode = (): string => {
