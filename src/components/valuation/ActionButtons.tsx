@@ -1,24 +1,31 @@
-
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Share2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ActionButtonsProps {
   selectedOption: string;
   isLoading: boolean;
-  onProceed: () => void;
+  onProceed: () => Promise<void>;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({ 
-  selectedOption, 
-  isLoading, 
-  onProceed 
-}) => {
+const ActionButtons: React.FC<ActionButtonsProps> = ({ selectedOption, isLoading, onProceed }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
@@ -31,31 +38,29 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     }
   };
 
-  const getSelectedLabel = () => {
-    switch (selectedOption) {
-      case 'quick': return 'rápido';
-      case 'premium': return 'premium';
-      default: return 'equilibrado';
-    }
-  };
-
-  // Create a handler that prevents multiple clicks
   const handleProceed = async () => {
-    // Evitar múltiples clics o procesar durante carga
-    if (isLoading || isSubmitting) {
-      console.log("ActionButtons: Evitando múltiples envíos - isLoading:", isLoading, "isSubmitting:", isSubmitting);
+    if (!selectedOption) {
+      toast({
+        title: "Selecciona una opción",
+        description: "Por favor selecciona un rango de precio para continuar.",
+        variant: "destructive",
+      });
       return;
     }
     
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      console.log("ActionButtons: Iniciando proceso de continuar con precio", getSelectedLabel());
-      await onProceed();
+      if (onProceed) {
+        await onProceed();
+      }
+      
+      // Después de guardar la opción seleccionada, redirigir a la pantalla de decisión
+      navigate('/seller/valuation-decision');
     } catch (error) {
-      console.error("ActionButtons: Error al procesar:", error);
+      console.error("Error al proceder con la selección:", error);
       toast({
-        title: "Error al procesar",
-        description: "No se pudo procesar tu solicitud. Por favor intenta de nuevo.",
+        title: "Error",
+        description: "No se pudo procesar tu selección. Inténtalo de nuevo.",
         variant: "destructive",
       });
     } finally {
@@ -63,44 +68,24 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     }
   };
 
-  // Combinar estados para saber si está procesando
-  const isProcessing = isLoading || isSubmitting;
-
-  const handleShare = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La función de compartir estará disponible próximamente.",
-    });
-  };
-
   return (
-    <motion.div variants={itemVariants} className="flex flex-col space-y-4">
-      <Button
-        onClick={handleProceed}
-        className="w-full py-6 text-lg"
-        disabled={isProcessing}
-      >
-        {isProcessing ? (
-          <span className="flex items-center">
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-            Procesando...
-          </span>
-        ) : (
-          <span className="flex items-center">
-            Continuar con precio {getSelectedLabel()} 
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </span>
-        )}
-      </Button>
-
-      <Button
-        variant="outline"
-        className="w-full"
-        disabled={isProcessing}
-        onClick={handleShare}
-      >
-        <Share2 className="mr-2 h-4 w-4" /> Compartir valuación
-      </Button>
+    <motion.div variants={containerVariants} className="flex justify-center mt-6">
+      <motion.div variants={itemVariants}>
+        <Button 
+          onClick={handleProceed} 
+          disabled={isLoading || isSubmitting}
+          className="w-full"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Procesando...
+            </>
+          ) : (
+            "Continuar"
+          )}
+        </Button>
+      </motion.div>
     </motion.div>
   );
 };
