@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -114,6 +113,11 @@ const ValuationResults = () => {
     }
   };
 
+  // Handle case where we have userData but not carData yet
+  if (!carData || !userData) {
+    return <LoadingState type="loading" />;
+  }
+
   if (errorMessage) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -129,11 +133,6 @@ const ValuationResults = () => {
 
   if (isLoading && !valuationData) {
     return <LoadingState type="calculation" carData={carData} />;
-  }
-
-  // Handle case where we have userData but not carData yet
-  if (!carData || !userData) {
-    return <LoadingState type="loading" />;
   }
 
   return (
