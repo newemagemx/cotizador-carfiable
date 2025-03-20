@@ -8,7 +8,8 @@ export type FileWithPreview = File & {
   preview: string;
 };
 
-interface DropzoneProps extends React.HTMLAttributes<HTMLDivElement> {
+// Using Omit to exclude the original onDrop property from HTMLAttributes
+interface DropzoneProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrop'> {
   onDrop: (acceptedFiles: FileWithPreview[]) => void;
   maxFiles?: number;
   maxSize?: number;
