@@ -14,26 +14,39 @@ export const sendToWebhook = async (
 ): Promise<boolean> => {
   try {
     console.log("valuationApi: Sending data to webhook", WEBHOOK_ENDPOINT);
-    const webhookResponse = await fetch(WEBHOOK_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...webhookData,
-        valuation: valuationData
-      }),
-    });
     
-    if (!webhookResponse.ok) {
-      console.warn('Webhook notification failed:', await webhookResponse.text());
-      return false;
-    } else {
-      console.log("valuationApi: Webhook notification successful");
-      return true;
+    const controller = new AbortController();
+    // Set a timeout to prevent hanging if the webhook is unreachable
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    try {
+      const webhookResponse = await fetch(WEBHOOK_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...webhookData,
+          valuation: valuationData
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!webhookResponse.ok) {
+        console.warn('Webhook notification failed:', await webhookResponse.text());
+        return false;
+      } else {
+        console.log("valuationApi: Webhook notification successful");
+        return true;
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      throw fetchError;
     }
   } catch (err) {
-    console.warn('Webhook error:', err);
+    console.warn('Webhook error (non-critical):', err);
     return false;
   }
 };

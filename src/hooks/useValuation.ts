@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CarData, UserData } from '@/types/forms';
 import { ValuationResponse } from '@/types/seller';
@@ -16,8 +16,13 @@ export const useValuation = (
   const [isLoading, setIsLoading] = useState(false);
   const [savedListingId, setSavedListingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const calculationDone = useRef(false);
+  const isUpdating = useRef(false);
 
   useEffect(() => {
+    // Only run this effect once per component instance
+    if (calculationDone.current) return;
+
     // Clear any previous error message when dependencies change
     setErrorMessage(null);
     
@@ -53,28 +58,31 @@ export const useValuation = (
 
         // Store the valuation in the database if we have a userId
         if (userId) {
-          const { data, error } = await saveVehicleListing(userId, safeCarData, mockValuationResponse);
-          
-          if (error) {
-            console.error("Error saving valuation to database:", error);
-            toast({
-              title: "Error al guardar",
-              description: "No se pudo guardar la valuación. " + error.message,
-              variant: "destructive",
-            });
-          } else if (data) {
-            console.log("useValuation: Saved listing with ID", data.id);
-            setSavedListingId(data.id);
-            mockValuationResponse.id = data.id;
+          try {
+            const { data, error } = await saveVehicleListing(userId, safeCarData, mockValuationResponse);
+            
+            if (error) {
+              console.error("Error saving valuation to database:", error);
+              // Continue even if saving to DB fails - don't block the UI
+            } else if (data) {
+              console.log("useValuation: Saved listing with ID", data.id);
+              setSavedListingId(data.id);
+              mockValuationResponse.id = data.id;
+            }
+          } catch (dbError) {
+            console.error("Exception when saving to database:", dbError);
+            // Continue without DB save
           }
         } else {
           console.log("useValuation: No userId provided, skipping database save");
         }
 
-        // Send to webhook for testing/integration
-        await sendToWebhook(webhookData, mockValuationResponse);
+        // Don't wait for webhook - it's often unavailable in development
+        sendToWebhook(webhookData, mockValuationResponse)
+          .catch(err => console.warn("Webhook notification failed (non-critical):", err));
 
         setValuationData(mockValuationResponse);
+        calculationDone.current = true;
         setIsLoading(false);
       } catch (error) {
         console.error('Error during valuation:', error);
@@ -91,34 +99,53 @@ export const useValuation = (
     performValuation();
   }, [carData, userData, userId, toast]);
 
-  const updateSelectedOption = async (selectedOption: string, listingId: string | null) => {
-    setIsLoading(true);
+  const updateSelectedOption = useCallback(async (selectedOption: string, listingId: string | null) => {
+    // Prevent multiple simultaneous calls
+    if (isUpdating.current) return { success: false, listingId };
     
-    // If we have a listing ID, update it with the selected price type
-    if (listingId) {
-      const { success, error } = await updateVehicleListing(selectedOption, listingId);
+    try {
+      isUpdating.current = true;
+      setIsLoading(true);
       
-      if (!success) {
-        toast({
-          title: "Error al actualizar",
-          description: "No se pudo actualizar la selección. " + (error?.message || ''),
-          variant: "destructive",
-        });
+      // If we have a listing ID, update it with the selected price type
+      if (listingId) {
+        try {
+          const { success, error } = await updateVehicleListing(selectedOption, listingId);
+          
+          if (!success) {
+            console.error("Failed to update listing with selected option:", error);
+            toast({
+              title: "Error al actualizar",
+              description: "No se pudo actualizar la selección. " + (error?.message || ''),
+              variant: "destructive",
+            });
+            // Continue even if update fails
+          }
+        } catch (err) {
+          console.error("Exception updating listing:", err);
+          // Continue even if update fails
+        }
+      } else {
+        console.log("useValuation: No listing ID available, skipping update");
       }
-    } else {
-      console.log("useValuation: No listing ID available, skipping update");
+      
+      // Show success message
+      toast({
+        title: "¡Excelente elección!",
+        description: "Hemos registrado tu preferencia de precio. Te contactaremos pronto.",
+      });
+      
+      setIsLoading(false);
+      isUpdating.current = false;
+      
+      return { success: true, listingId };
+    } catch (error) {
+      console.error("Error in updateSelectedOption:", error);
+      setIsLoading(false);
+      isUpdating.current = false;
+      return { success: false, listingId };
     }
-    
-    // Show success message
-    toast({
-      title: "¡Excelente elección!",
-      description: "Hemos registrado tu preferencia de precio. Te contactaremos pronto.",
-    });
-    
-    setIsLoading(false);
-    
-    return { success: true, listingId };
-  };
+  }, [toast]);
 
   return {
     valuationData,

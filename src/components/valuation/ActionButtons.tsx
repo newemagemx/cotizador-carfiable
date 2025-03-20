@@ -35,10 +35,16 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     }
   };
 
+  // Create a handler that prevents multiple clicks
+  const handleProceed = () => {
+    if (isLoading) return;
+    onProceed();
+  };
+
   return (
     <motion.div variants={itemVariants} className="flex flex-col space-y-4">
       <Button
-        onClick={onProceed}
+        onClick={handleProceed}
         className="w-full py-6 text-lg"
         disabled={isLoading}
       >

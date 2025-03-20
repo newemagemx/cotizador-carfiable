@@ -39,6 +39,17 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
     }
   };
 
+  // Log the actual carData being received
+  console.log("CarDetailsCard received carData:", carData);
+  
+  // Ensure carData exists and has necessary properties
+  const brand = displayValue(carData?.brand);
+  const model = displayValue(carData?.model);
+  const year = displayValue(carData?.year);
+  const version = carData?.version ? carData.version : '';
+  const mileage = carData?.mileage !== undefined ? carData.mileage : 'No especificado';
+  const condition = getConditionText(carData?.condition);
+
   return (
     <motion.div variants={itemVariants}>
       <Card className="mb-6 shadow-md border-blue-100 overflow-hidden">
@@ -51,18 +62,18 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
           </CardTitle>
           <CardDescription>
             <span className="font-semibold">
-              {displayValue(carData.brand)} {displayValue(carData.model)} {displayValue(carData.year)}
+              {brand} {model} {year}
             </span>
-            {carData.version && <span> - {displayValue(carData.version)}</span>}
+            {version && <span> - {version}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Kilometraje:</span> {displayValue(carData.mileage)} km
+              <span className="text-muted-foreground">Kilometraje:</span> {mileage !== 'No especificado' ? `${mileage} km` : mileage}
             </div>
             <div>
-              <span className="text-muted-foreground">Condición:</span> {getConditionText(carData.condition)}
+              <span className="text-muted-foreground">Condición:</span> {condition}
             </div>
           </div>
         </CardContent>
