@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 
@@ -123,6 +122,7 @@ export const verifyCodeAndSaveData = async (
     });
     
     let userId: string;
+    let isNewUser = false;
     
     if (userOperationsResponse?.data) {
       console.log('User exists, updating last verified timestamp');
@@ -161,9 +161,10 @@ export const verifyCodeAndSaveData = async (
       }
       
       userId = newUserResponse.data.id;
+      isNewUser = true;
     }
     
-    // Save the quotation data (we'll keep this for backward compatibility)
+    // Save the quotation data
     const { error: quotationError } = await supabase
       .from('quotations')
       .insert({
@@ -212,15 +213,44 @@ export const verifyCodeAndSaveData = async (
       console.warn('Webhook error (non-fatal):', err);
     }
     
-    // Success! Call the onVerified callback with the userId
+    // Store the complete user data in sessionStorage
+    sessionStorage.setItem('userData', JSON.stringify({
+      ...userData,
+      id: userId,
+      lastVerified: new Date().toISOString()
+    }));
+    
+    // Store car data
+    if (carData) {
+      sessionStorage.setItem('carData', JSON.stringify(carData));
+    }
+    
+    // Store valuation data
+    localStorage.setItem('valuationData', JSON.stringify({
+      userId,
+      userData,
+      carData
+    }));
+    
+    // Success! Now determine where to navigate based on user status and session
     setTimeout(() => {
-      window.location.href = '/seller/valuation-results?success=true';
-      // Navigate to ValuationResults with the user and car data
-      localStorage.setItem('valuationData', JSON.stringify({
-        userId,
-        userData,
-        carData
-      }));
+      if (isNewUser) {
+        // If this is a new user or no Supabase session exists, go to password setup
+        const session = supabase.auth.session();
+        if (!session) {
+          // Navigate to password setup
+          window.location.href = '/auth/password-setup';
+        } else {
+          // User already has a session, go to results
+          window.location.href = '/seller/valuation-results?success=true';
+        }
+      } else {
+        // Existing user, go directly to results
+        window.location.href = '/seller/valuation-results?success=true';
+      }
+      
+      // Call the onVerified callback
+      onVerified();
     }, 500);
     
     return true;

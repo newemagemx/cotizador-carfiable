@@ -10,6 +10,7 @@ import VerifyPhone from "./pages/seller/VerifyPhone";
 import UserAuth from "./pages/auth/UserAuth";
 import ValuationResults from "./pages/seller/ValuationResults";
 import SellerRegistration from "./pages/seller/SellerRegistration";
+import PasswordSetup from "./pages/auth/PasswordSetup";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/seller/verify" element={<VerifyPhone />} />
         <Route path="/seller/register" element={<SellerRegistration />} />
         <Route path="/auth" element={<UserAuth />} />
+        <Route path="/auth/password-setup" element={<PasswordSetup />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>

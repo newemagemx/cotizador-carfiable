@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -106,7 +106,16 @@ const UserAuth: React.FC = () => {
           role: 'both',
         };
         
+        // Store in sessionStorage for the verification process
         sessionStorage.setItem('userData', JSON.stringify(userData));
+        
+        // Also store in a separate key for the auth flow specifically
+        sessionStorage.setItem('authUserData', JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: normalizedPhone,
+          countryCode: countryCode
+        }));
       }
 
       toast({
@@ -114,8 +123,18 @@ const UserAuth: React.FC = () => {
         description: "Tu cuenta ha sido creada correctamente",
       });
 
-      // Redirect to the correct verification page path
-      navigate('/seller/verify');
+      // Redirect to the correct verification page path with state to indicate it came from auth
+      navigate('/seller/verify', { 
+        state: { 
+          fromAuth: true,
+          userData: {
+            name: data.name,
+            email: data.email,
+            phone: normalizedPhone,
+            countryCode: countryCode
+          }
+        } 
+      });
     } catch (error: any) {
       toast({
         title: "Error de registro",
