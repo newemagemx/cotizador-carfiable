@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroupItem } from '@/components/ui/radio-group';
 import { Check, Clock, Sparkles } from 'lucide-react';
 import { formatCurrency } from '@/utils/shareUtils';
+import { cn } from '@/lib/utils';
 
 interface PricingOptionProps {
   type: 'quick' | 'balanced' | 'premium';
@@ -26,12 +27,12 @@ const PricingOption: React.FC<PricingOptionProps> = ({
           title: 'Venta Rápida',
           description: 'Precio más bajo pero con venta garantizada en 7-14 días.',
           icon: <Clock className="h-3 w-3 mr-1" />,
-          color: 'orange',
-          features: [
-            'Proceso acelerado',
-            'Menos trámites',
-            'Pago inmediato'
-          ]
+          colorClasses: {
+            badge: 'bg-orange-100 text-orange-800 border-orange-200',
+            border: 'border-orange-500',
+            bg: 'bg-orange-50',
+            checkIcon: 'text-orange-500'
+          }
         };
       
       case 'balanced':
@@ -39,12 +40,12 @@ const PricingOption: React.FC<PricingOptionProps> = ({
           title: 'Equilibrado',
           description: 'Mejor relación entre precio y tiempo de venta (15-30 días).',
           icon: <Check className="h-3 w-3 mr-1" />,
-          color: 'blue',
-          features: [
-            'Mejor precio que la venta rápida',
-            'Tiempo razonable',
-            'Mayor exposición'
-          ]
+          colorClasses: {
+            badge: 'bg-blue-100 text-blue-800 border-blue-200',
+            border: 'border-blue-500',
+            bg: 'bg-blue-50',
+            checkIcon: 'text-blue-500'
+          }
         };
       
       case 'premium':
@@ -52,28 +53,33 @@ const PricingOption: React.FC<PricingOptionProps> = ({
           title: 'Premium',
           description: 'El mejor precio posible, pero requiere más tiempo (30-45 días).',
           icon: <Sparkles className="h-3 w-3 mr-1" />,
-          color: 'purple',
-          features: [
-            'Precio máximo del mercado',
-            'Marketing premium',
-            'Atención personalizada'
-          ]
+          colorClasses: {
+            badge: 'bg-purple-100 text-purple-800 border-purple-200',
+            border: 'border-purple-500',
+            bg: 'bg-purple-50',
+            checkIcon: 'text-purple-500'
+          }
         };
     }
   };
 
   const details = getOptionDetails();
-  const color = details.color;
 
   return (
-    <div className={`relative rounded-lg border-2 ${isSelected ? `border-${color}-500 bg-${color}-50` : 'border-gray-200'} p-4 transition-all`}>
+    <div className={cn(
+      "relative rounded-lg border-2", 
+      isSelected ? 
+        `${details.colorClasses.border} ${details.colorClasses.bg}` : 
+        'border-gray-200',
+      "p-4 transition-all"
+    )}>
       <RadioGroupItem
         value={type}
         id={type}
-        className={`absolute right-4 top-4 border-${color}-500`}
+        className={isSelected ? details.colorClasses.border : ''}
       />
       <div className="mb-2">
-        <Badge variant="outline" className={`bg-${color}-100 text-${color}-800 border-${color}-200`}>
+        <Badge variant="outline" className={details.colorClasses.badge}>
           {details.icon} {details.title}
         </Badge>
       </div>
@@ -87,9 +93,10 @@ const PricingOption: React.FC<PricingOptionProps> = ({
         {details.description}
       </p>
       <ul className="text-xs space-y-1 text-gray-600">
-        {details.features.map((feature, index) => (
+        {getOptionDetails().features.map((feature, index) => (
           <li key={index} className="flex items-center">
-            <Check className={`h-3 w-3 mr-1 text-${color}-500`} /> {feature}
+            <Check className={cn("h-3 w-3 mr-1", details.colorClasses.checkIcon)} /> 
+            {feature}
           </li>
         ))}
       </ul>
