@@ -48,19 +48,26 @@ const ValuationResults = () => {
     isLoading: isUserDataLoading 
   } = useInitializeUserData();
   
-  // Calculate valuation with custom hook - always proceed even with minimal data
-  const processableCarData = carData || { 
-    brand: 'Vehículo', 
-    model: 'Genérico', 
-    year: '2020',
-    price: '',
-    downPaymentPercentage: 20
+  // Preparamos datos del coche con valores por defecto explícitos
+  const processableCarData = {
+    brand: carData?.brand || 'Vehículo',
+    model: carData?.model || 'Genérico',
+    year: carData?.year || '2020',
+    price: carData?.price || '',
+    downPaymentPercentage: carData?.downPaymentPercentage || 20,
+    version: carData?.version || '',
+    mileage: carData?.mileage || 0,
+    condition: carData?.condition || 'good',
+    location: carData?.location || '',
+    features: carData?.features || []
   };
   
-  const processableUserData = userData || { 
-    name: 'Usuario', 
-    email: '', 
-    phone: '' 
+  // Preparamos datos de usuario
+  const processableUserData = {
+    name: userData?.name || 'Usuario', 
+    email: userData?.email || '', 
+    phone: userData?.phone || '',
+    countryCode: userData?.countryCode || '+52'
   };
   
   // Calculate valuation with custom hook
