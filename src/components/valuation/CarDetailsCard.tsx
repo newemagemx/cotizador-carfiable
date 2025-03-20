@@ -22,6 +22,17 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
     }
   };
 
+  // Función para validar si los datos son genéricos o reales
+  const hasRealData = () => {
+    return carData && 
+      carData.brand && 
+      carData.brand !== 'Vehículo' && 
+      carData.brand !== 'Generic' &&
+      carData.model && 
+      carData.model !== 'Genérico' && 
+      carData.model !== 'Model';
+  };
+
   // Función para mostrar valores con mejor manejo de nulos/indefinidos
   const displayValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return 'No especificado';
@@ -44,26 +55,25 @@ const CarDetailsCard: React.FC<CarDetailsCardProps> = ({ carData }) => {
     }
   };
 
-  // Procesamiento de valores para mostrar
-  const brand = displayValue(carData.brand === 'Vehículo' || carData.brand === 'Generic' ? null : carData.brand);
-  const model = displayValue(carData.model === 'Genérico' || carData.model === 'Model' ? null : carData.model);
-  const year = displayValue(carData.year === '2020' && (brand === 'No especificado' || model === 'No especificado') ? null : carData.year);
-  const version = carData.version ? carData.version : '';
-  const mileage = carData.mileage !== undefined && carData.mileage > 0 
+  // Valores específicos para mostrar
+  const brand = hasRealData() ? displayValue(carData.brand) : 'Vehículo';
+  const model = hasRealData() ? displayValue(carData.model) : 'Genérico';
+  const year = hasRealData() ? displayValue(carData.year) : '2020';
+  const version = carData?.version ? carData.version : '';
+  const mileage = carData?.mileage !== undefined && carData.mileage > 0 
     ? `${carData.mileage} km` 
     : 'No especificado';
-  const condition = getConditionText(carData.condition);
+  const condition = getConditionText(carData?.condition);
 
-  console.log("CarDetailsCard - Datos completos:", {
+  console.log("CarDetailsCard - Datos procesados:", {
     carData,
-    procesados: {
-      brand,
-      model,
-      year,
-      version,
-      mileage,
-      condition
-    }
+    hasRealData: hasRealData(),
+    brand,
+    model,
+    year,
+    version,
+    mileage,
+    condition
   });
 
   return (
