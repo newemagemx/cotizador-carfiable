@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Check, Sparkles, ArrowRight, Share2 } from 'lucide-react';
+import { Clock, Check, Sparkles, ArrowRight, Share2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ValuationResponse } from '@/types/seller';
 import { formatCurrency } from '@/utils/shareUtils';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid'; // Replace with actual webhook for production
 
@@ -23,24 +24,101 @@ const ValuationResults = () => {
   const [selectedOption, setSelectedOption] = useState<string>('balanced');
   const [isLoading, setIsLoading] = useState(false);
   const [savedListingId, setSavedListingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Get the data passed from the verification step
-  const userData = location.state?.userData as UserData;
-  const carData = location.state?.carData as CarData;
-  const userId = location.state?.userId as string;
+  // Get the data passed from the verification step or from Supabase Auth
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [carData, setCarData] = useState<CarData | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Mock valuation data (to be replaced with actual API call)
   const [valuationData, setValuationData] = useState<ValuationResponse | null>(null);
 
   useEffect(() => {
+    // Check if we have user data from location state
+    const locationUserData = location.state?.userData as UserData | undefined;
+    const locationCarData = location.state?.carData as CarData | undefined;
+    const locationUserId = location.state?.userId as string | undefined;
+    
+    const loadUserData = async () => {
+      try {
+        // If we have state data, use it
+        if (locationUserData) {
+          setUserData(locationUserData);
+        }
+        
+        if (locationCarData) {
+          setCarData(locationCarData);
+        }
+        
+        if (locationUserId) {
+          setUserId(locationUserId);
+        } else {
+          // Try to get current user from Supabase
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUserId(session.user.id);
+            
+            // If we don't have user data from state, try to get it from user metadata
+            if (!locationUserData) {
+              const metadata = session.user.user_metadata;
+              if (metadata) {
+                setUserData({
+                  name: metadata.full_name || '',
+                  email: session.user.email || '',
+                  phone: metadata.phone || '',
+                  countryCode: metadata.country_code || '+52'
+                });
+              }
+            }
+            
+            // If we don't have car data, check if we can get it from the database
+            if (!locationCarData) {
+              // Get the most recent vehicle listing for this user
+              const { data: listings, error } = await supabase
+                .from('vehicle_listings')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+                
+              if (!error && listings && listings.length > 0) {
+                const listing = listings[0];
+                setCarData({
+                  brand: listing.brand || '',
+                  model: listing.model || '',
+                  year: listing.year ? listing.year.toString() : '',
+                  version: listing.version || '',
+                  mileage: listing.mileage ? listing.mileage.toString() : '0',
+                  condition: listing.condition || 'good',
+                  price: '',
+                  downPaymentPercentage: 20
+                });
+              }
+            }
+          }
+        }
+
+        // Check if we have the necessary data to continue
+        if (!userData && !locationUserData) {
+          setErrorMessage("No se encontró información del usuario. Por favor regresa al inicio.");
+        }
+        
+        if (!carData && !locationCarData) {
+          setErrorMessage("No se encontró información del vehículo. Por favor regresa al inicio.");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        setErrorMessage("Error al cargar los datos. Por favor intenta de nuevo.");
+      }
+    };
+    
+    loadUserData();
+  }, [location, navigate]);
+
+  useEffect(() => {
     if (!userData || !carData) {
-      toast({
-        title: "Información faltante",
-        description: "No se encontraron datos del vehículo o del usuario. Por favor intenta de nuevo.",
-        variant: "destructive",
-      });
-      navigate('/');
-      return;
+      return; // Wait until we have both user and car data
     }
 
     const calculateValuation = async () => {
@@ -49,20 +127,24 @@ const ValuationResults = () => {
         // For now, simulate an API call with setTimeout
         setIsLoading(true);
         
+        // Safely parse mileage and year as numbers
+        const mileage = parseInt(carData.mileage.toString() || '0');
+        const year = parseInt(carData.year?.toString() || '2020');
+        
         // You can replace this with an actual API call when ready
         const webhookData = {
           car: {
-            brand: carData.brand,
-            model: carData.model,
-            year: carData.year,
+            brand: carData.brand || '',
+            model: carData.model || '',
+            year: year,
             version: carData.version || '',
-            mileage: parseInt(carData.mileage.toString()),
+            mileage: mileage,
             condition: carData.condition || 'good',
           },
           user: {
-            name: userData.name,
-            email: userData.email,
-            phone: userData.phone,
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
           }
         };
 
@@ -71,8 +153,8 @@ const ValuationResults = () => {
           setTimeout(() => {
             // Mock price calculation based on car data
             const basePrice = 350000; // Base price for example
-            const mileageImpact = parseInt(carData.mileage.toString()) * -0.05; // Reduce price by mileage
-            const yearImpact = (2023 - parseInt(carData.year)) * -10000; // Older cars worth less
+            const mileageImpact = mileage * -0.05; // Reduce price by mileage
+            const yearImpact = (2023 - year) * -10000; // Older cars worth less
             
             const balancedPrice = Math.round(basePrice + mileageImpact + yearImpact);
             const quickPrice = Math.round(balancedPrice * 0.85); // 15% less for quick sale
@@ -94,11 +176,11 @@ const ValuationResults = () => {
               .from('vehicle_listings')
               .insert({
                 user_id: userId,
-                brand: carData.brand,
-                model: carData.model,
-                year: carData.year,
+                brand: carData.brand || '',
+                model: carData.model || '',
+                year: year,
                 version: carData.version || '',
-                mileage: parseInt(carData.mileage.toString()),
+                mileage: mileage,
                 condition: carData.condition || 'good',
                 location: carData.location || '',
                 features: carData.features || [],
@@ -157,11 +239,12 @@ const ValuationResults = () => {
           variant: "destructive",
         });
         setIsLoading(false);
+        setErrorMessage("Error al calcular la valuación. Por favor intenta de nuevo.");
       }
     };
 
     calculateValuation();
-  }, [carData, userData, userId, navigate, toast]);
+  }, [carData, userData, userId, toast]);
 
   const handleOptionSelect = (value: string) => {
     setSelectedOption(value);
@@ -252,15 +335,44 @@ const ValuationResults = () => {
     }
   };
 
+  if (errorMessage) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+        <Button onClick={() => navigate('/')} className="w-full">
+          Volver al inicio
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading && !valuationData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Calculando el valor de tu {carData?.brand} {carData?.model}</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            Calculando el valor de tu {carData?.brand} {carData?.model}
+          </h2>
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-muted-foreground">
             Estamos analizando miles de datos para brindarte la mejor valoración...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle case where we have userData but not carData yet
+  if (!carData || !userData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Cargando información...</h2>
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );
@@ -277,7 +389,7 @@ const ValuationResults = () => {
         <motion.div variants={itemVariants}>
           <h1 className="text-3xl font-bold text-center mb-2">Resultado de la Valuación</h1>
           <p className="text-center text-muted-foreground mb-8">
-            Hemos calculado el valor de tu {carData?.brand} {carData?.model} {carData?.year}.
+            Hemos calculado el valor de tu {carData.brand} {carData.model} {carData.year}.
             Selecciona la opción que mejor se adapte a tus necesidades.
           </p>
         </motion.div>
@@ -287,17 +399,17 @@ const ValuationResults = () => {
             <CardHeader className="pb-2">
               <CardTitle>Tu Vehículo</CardTitle>
               <CardDescription>
-                <span className="font-semibold">{carData?.brand} {carData?.model} {carData?.year}</span>
-                {carData?.version && <span> - {carData.version}</span>}
+                <span className="font-semibold">{carData.brand} {carData.model} {carData.year}</span>
+                {carData.version && <span> - {carData.version}</span>}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Kilometraje:</span> {carData?.mileage} km
+                  <span className="text-muted-foreground">Kilometraje:</span> {carData.mileage} km
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Condición:</span> {carData?.condition === 'excellent' ? 'Excelente' : carData?.condition === 'good' ? 'Buena' : 'Regular'}
+                  <span className="text-muted-foreground">Condición:</span> {carData.condition === 'excellent' ? 'Excelente' : carData.condition === 'good' ? 'Buena' : 'Regular'}
                 </div>
               </div>
             </CardContent>
