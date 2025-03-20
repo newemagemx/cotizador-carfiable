@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -129,14 +130,14 @@ const ValuationResults = () => {
         
         // Safely parse mileage and year as numbers
         const mileage = parseInt(carData.mileage?.toString() || '0');
-        const year = parseInt(carData.year?.toString() || '2020');
+        const yearString = carData.year?.toString() || '2020';
         
         // You can replace this with an actual API call when ready
         const webhookData = {
           car: {
             brand: carData.brand || '',
             model: carData.model || '',
-            year: year,
+            year: yearString,
             version: carData.version || '',
             mileage: mileage,
             condition: carData.condition || 'good',
@@ -153,8 +154,9 @@ const ValuationResults = () => {
           setTimeout(() => {
             // Mock price calculation based on car data
             const basePrice = 350000; // Base price for example
+            const yearNumber = parseInt(yearString);
             const mileageImpact = mileage * -0.05; // Reduce price by mileage
-            const yearImpact = (2023 - year) * -10000; // Older cars worth less
+            const yearImpact = (2023 - yearNumber) * -10000; // Older cars worth less
             
             const balancedPrice = Math.round(basePrice + mileageImpact + yearImpact);
             const quickPrice = Math.round(balancedPrice * 0.85); // 15% less for quick sale
@@ -178,7 +180,7 @@ const ValuationResults = () => {
                 user_id: userId,
                 brand: carData.brand || '',
                 model: carData.model || '',
-                year: year,
+                year: yearString,
                 version: carData.version || '',
                 mileage: mileage,
                 condition: carData.condition || 'good',
