@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 import { ValuationResponse } from '@/types/seller';
 
-const WEBHOOK_ENDPOINT = 'https://webhook-test.com/c9f525259444e849009b37884b2d0885'; // Updated webhook URL
+const WEBHOOK_ENDPOINT = 'https://webhook-test.com/c9f525259444e849009b37884b2d0885';
 
 export const useValuation = (
   carData: CarData | null,
@@ -81,10 +81,10 @@ export const useValuation = (
         
         console.log("useValuation: Generated mock valuation", mockValuationResponse);
 
-        // Store the valuation in the database
+        // Store the valuation in the database using vehicle_listings table
         if (userId) {
           try {
-            console.log("useValuation: Saving valuation to database for user", userId);
+            console.log("useValuation: Saving valuation to vehicle_listings for user", userId);
             const { data, error } = await supabase
               .from('vehicle_listings')
               .insert({
@@ -114,7 +114,7 @@ export const useValuation = (
                 variant: "destructive",
               });
             } else if (data) {
-              console.log("useValuation: Successfully saved valuation", data);
+              console.log("useValuation: Successfully saved valuation to vehicle_listings", data);
               setSavedListingId(data.id);
               mockValuationResponse.id = data.id;
             }
@@ -171,7 +171,7 @@ export const useValuation = (
     // If we have a listing ID, update it with the selected price type
     if (listingId) {
       try {
-        console.log("useValuation: Updating selected price type", { listingId, selectedOption });
+        console.log("useValuation: Updating selected price type in vehicle_listings", { listingId, selectedOption });
         const { error } = await supabase
           .from('vehicle_listings')
           .update({ 

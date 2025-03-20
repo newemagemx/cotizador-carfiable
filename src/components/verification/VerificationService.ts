@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CarData, UserData } from '@/types/forms';
 
@@ -179,25 +180,65 @@ export const verifyCodeAndSaveData = async (
       userId = existingUser.id;
     }
     
-    // Save the quotation data
-    const { error: quotationError } = await supabase
-      .from('quotations')
-      .insert({
-        user_name: userData.name,
-        user_email: userData.email,
-        user_phone: countryCode + userData.phone,
-        car_brand: carData.brand,
-        car_model: carData.model,
-        car_year: carData.year,
-        car_price: carData.price,
-        down_payment_percentage: carData.downPaymentPercentage,
-        selected_term: term,
-        is_verified: true,
-      });
-    
-    if (quotationError) {
-      console.error("Error saving quotation data:", quotationError);
-      return false;
+    // Save the vehicle data to vehicle_listings
+    if (carData.brand && carData.model) {
+      console.log("Saving vehicle data to vehicle_listings table");
+      const mileage = parseInt(carData.mileage?.toString() || '0');
+      const yearString = carData.year?.toString() || '2020';
+      
+      // Calculate mock valuation for the vehicle
+      const basePrice = 350000; // Base price for example
+      const yearNumber = parseInt(yearString);
+      const mileageImpact = mileage * -0.05; // Reduce price by mileage
+      const yearImpact = (2023 - yearNumber) * -10000; // Older cars worth less
+      
+      const balancedPrice = Math.round(basePrice + mileageImpact + yearImpact);
+      const quickPrice = Math.round(balancedPrice * 0.85); // 15% less for quick sale
+      const premiumPrice = Math.round(balancedPrice * 1.15); // 15% more for premium
+      
+      // Save vehicle listing
+      const { error: listingError } = await supabase
+        .from('vehicle_listings')
+        .insert({
+          user_id: userId,
+          brand: carData.brand,
+          model: carData.model,
+          year: yearString,
+          version: carData.version || '',
+          mileage: mileage,
+          condition: carData.condition || 'good',
+          location: carData.location || '',
+          features: carData.features || [],
+          estimated_price_quick: quickPrice,
+          estimated_price_balanced: balancedPrice,
+          estimated_price_premium: premiumPrice,
+          currency: 'MXN',
+          status: 'draft'
+        });
+      
+      if (listingError) {
+        console.error("Error saving vehicle listing:", listingError);
+      }
+    } else {
+      // If this is a buyer flow, save quotation data
+      const { error: quotationError } = await supabase
+        .from('quotations')
+        .insert({
+          user_name: userData.name,
+          user_email: userData.email,
+          user_phone: countryCode + userData.phone,
+          car_brand: carData.brand || '',
+          car_model: carData.model || '',
+          car_year: carData.year || '',
+          car_price: carData.price || '',
+          down_payment_percentage: carData.downPaymentPercentage || 20,
+          selected_term: term,
+          is_verified: true,
+        });
+      
+      if (quotationError) {
+        console.error("Error saving quotation data:", quotationError);
+      }
     }
     
     // Call the webhook to handle external services notification
@@ -215,7 +256,7 @@ export const verifyCodeAndSaveData = async (
           paymentInfo: {
             term,
             monthlyPayment,
-            downPayment: Number(carData.price) * (carData.downPaymentPercentage / 100),
+            downPayment: carData.price ? Number(carData.price) * (carData.downPaymentPercentage / 100) : 0,
           },
           verificationTime: new Date().toISOString(),
         }),
