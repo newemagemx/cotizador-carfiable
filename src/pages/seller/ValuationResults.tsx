@@ -1,19 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CarData, UserData } from '@/types/forms';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Clock, Check, Sparkles, ArrowRight, Share2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CarData, UserData } from '@/types/forms';
 import { ValuationResponse } from '@/types/seller';
-import { formatCurrency } from '@/utils/shareUtils';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+
+// Import the refactored components
+import ValuationHeader from '@/components/valuation/ValuationHeader';
+import CarDetailsCard from '@/components/valuation/CarDetailsCard';
+import PricingOptions from '@/components/valuation/PricingOptions';
+import ActionButtons from '@/components/valuation/ActionButtons';
+import ValuationFooter from '@/components/valuation/ValuationFooter';
+import LoadingState from '@/components/valuation/LoadingState';
+import ErrorState from '@/components/valuation/ErrorState';
 
 const WEBHOOK_ENDPOINT = 'https://webhook.site/your-uuid'; // Replace with actual webhook for production
 
@@ -178,7 +179,7 @@ const ValuationResults = () => {
                 user_id: userId,
                 brand: carData.brand || '',
                 model: carData.model || '',
-                year: year,
+                year: year.toString(),
                 version: carData.version || '',
                 mileage: mileage,
                 condition: carData.condition || 'good',
@@ -298,20 +299,6 @@ const ValuationResults = () => {
     });
   };
 
-  const getSelectedPrice = () => {
-    if (!valuationData) return 0;
-    
-    switch (selectedOption) {
-      case 'quick':
-        return valuationData.quickSellPrice;
-      case 'premium':
-        return valuationData.premiumPrice;
-      case 'balanced':
-      default:
-        return valuationData.balancedPrice;
-    }
-  };
-
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -323,59 +310,17 @@ const ValuationResults = () => {
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
-
   if (errorMessage) {
-    return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-        <Button onClick={() => navigate('/')} className="w-full">
-          Volver al inicio
-        </Button>
-      </div>
-    );
+    return <ErrorState message={errorMessage} />;
   }
 
   if (isLoading && !valuationData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">
-            Calculando el valor de tu {carData?.brand} {carData?.model}
-          </h2>
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">
-            Estamos analizando miles de datos para brindarte la mejor valoración...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingState type="calculation" carData={carData} />;
   }
 
   // Handle case where we have userData but not carData yet
   if (!carData || !userData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Cargando información...</h2>
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <LoadingState type="loading" />;
   }
 
   return (
@@ -386,177 +331,29 @@ const ValuationResults = () => {
         variants={containerVariants}
         className="space-y-6"
       >
-        <motion.div variants={itemVariants}>
-          <h1 className="text-3xl font-bold text-center mb-2">Resultado de la Valuación</h1>
-          <p className="text-center text-muted-foreground mb-8">
-            Hemos calculado el valor de tu {carData.brand} {carData.model} {carData.year}.
-            Selecciona la opción que mejor se adapte a tus necesidades.
-          </p>
-        </motion.div>
+        <ValuationHeader 
+          carBrand={carData.brand} 
+          carModel={carData.model} 
+          carYear={carData.year} 
+        />
 
-        <motion.div variants={itemVariants}>
-          <Card className="mb-6 shadow-md border-blue-100">
-            <CardHeader className="pb-2">
-              <CardTitle>Tu Vehículo</CardTitle>
-              <CardDescription>
-                <span className="font-semibold">{carData.brand} {carData.model} {carData.year}</span>
-                {carData.version && <span> - {carData.version}</span>}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Kilometraje:</span> {carData.mileage} km
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Condición:</span> {carData.condition === 'excellent' ? 'Excelente' : carData.condition === 'good' ? 'Buena' : 'Regular'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <CarDetailsCard carData={carData} />
 
-        <motion.div variants={itemVariants}>
-          <RadioGroup
-            value={selectedOption}
-            onValueChange={handleOptionSelect}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-          >
-            <div className={`relative rounded-lg border-2 ${selectedOption === 'quick' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} p-4 transition-all`}>
-              <RadioGroupItem
-                value="quick"
-                id="quick"
-                className="absolute right-4 top-4 border-orange-500"
-              />
-              <div className="mb-2">
-                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
-                  <Clock className="h-3 w-3 mr-1" /> Venta Rápida
-                </Badge>
-              </div>
-              <Label
-                htmlFor="quick"
-                className="text-xl font-bold block mb-1 cursor-pointer"
-              >
-                {valuationData && formatCurrency(valuationData.quickSellPrice, valuationData.currency)}
-              </Label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Precio más bajo pero con venta garantizada en 7-14 días.
-              </p>
-              <ul className="text-xs space-y-1 text-gray-600">
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Proceso acelerado
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Menos trámites
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-orange-500" /> Pago inmediato
-                </li>
-              </ul>
-            </div>
+        {valuationData && (
+          <PricingOptions 
+            valuationData={valuationData} 
+            selectedOption={selectedOption} 
+            onOptionSelect={handleOptionSelect} 
+          />
+        )}
 
-            <div className={`relative rounded-lg border-2 ${selectedOption === 'balanced' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} p-4 transition-all`}>
-              <RadioGroupItem
-                value="balanced"
-                id="balanced"
-                className="absolute right-4 top-4 border-blue-500"
-              />
-              <div className="mb-2">
-                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
-                  <Check className="h-3 w-3 mr-1" /> Equilibrado
-                </Badge>
-              </div>
-              <Label
-                htmlFor="balanced"
-                className="text-xl font-bold block mb-1 cursor-pointer"
-              >
-                {valuationData && formatCurrency(valuationData.balancedPrice, valuationData.currency)}
-              </Label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Mejor relación entre precio y tiempo de venta (15-30 días).
-              </p>
-              <ul className="text-xs space-y-1 text-gray-600">
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Mejor precio que la venta rápida
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Tiempo razonable
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-blue-500" /> Mayor exposición
-                </li>
-              </ul>
-            </div>
+        <ActionButtons 
+          selectedOption={selectedOption} 
+          isLoading={isLoading} 
+          onProceed={handleProceed} 
+        />
 
-            <div className={`relative rounded-lg border-2 ${selectedOption === 'premium' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'} p-4 transition-all`}>
-              <RadioGroupItem
-                value="premium"
-                id="premium"
-                className="absolute right-4 top-4 border-purple-500"
-              />
-              <div className="mb-2">
-                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
-                  <Sparkles className="h-3 w-3 mr-1" /> Premium
-                </Badge>
-              </div>
-              <Label
-                htmlFor="premium"
-                className="text-xl font-bold block mb-1 cursor-pointer"
-              >
-                {valuationData && formatCurrency(valuationData.premiumPrice, valuationData.currency)}
-              </Label>
-              <p className="text-sm text-muted-foreground mb-4">
-                El mejor precio posible, pero requiere más tiempo (30-45 días).
-              </p>
-              <ul className="text-xs space-y-1 text-gray-600">
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Precio máximo del mercado
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Marketing premium
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-3 w-3 mr-1 text-purple-500" /> Atención personalizada
-                </li>
-              </ul>
-            </div>
-          </RadioGroup>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="flex flex-col space-y-4">
-          <Button
-            onClick={handleProceed}
-            className="w-full py-6 text-lg"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="flex items-center">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                Procesando...
-              </span>
-            ) : (
-              <span className="flex items-center">
-                Continuar con precio {selectedOption === 'quick' ? 'rápido' : selectedOption === 'premium' ? 'premium' : 'equilibrado'} 
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </span>
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={isLoading}
-          >
-            <Share2 className="mr-2 h-4 w-4" /> Compartir valuación
-          </Button>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Esta valuación es una estimación basada en los datos proporcionados y las condiciones actuales del mercado.
-            El precio final puede variar según la inspección física del vehículo.
-          </p>
-        </motion.div>
+        <ValuationFooter />
       </motion.div>
     </div>
   );
